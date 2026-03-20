@@ -1,0 +1,7 @@
+{
+  "name": "hemingway",
+  "private": true,
+  "scripts": {
+    "dev": "cd client && npm run dev"
+  }
+}
