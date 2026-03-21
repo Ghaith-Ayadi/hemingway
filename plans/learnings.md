@@ -1,4 +1,4 @@
-# Hemingway — Additional Requirements
+# Hemingway — Learnings
 
 Decisions and learnings from each phase that aren't covered by the PRD or roadmap.
 
@@ -47,3 +47,9 @@ Decisions and learnings from each phase that aren't covered by the PRD or roadma
 - **ResizeObserver on the column body**: scale is recomputed whenever the column width changes (e.g. window resize). This keeps the pages correctly fitted without hardcoding a pixel value
 - **`resolvedStyles` stored in App state**: set by the pipeline via `onResolvedStyles` callback. This guarantees the renderer uses the exact same dimensions as the paginator — not a recomputation that might drift if settings changed mid-run
 - **Page content color**: `color: #111` set on the content area `div` inside `A4Page`. Without this, text inherits the body's `#e8e8e8` and is nearly invisible on the white page
+
+---
+
+## Workflow
+
+- **`/done` skill**: project-level skill at `.claude/commands/done.md`. Steps: (1) update learnings, (2) commit, (3) push. Must be invoked manually at end of each unit of work. Skill files are loaded at session start — newly created skills require a new session to become available
