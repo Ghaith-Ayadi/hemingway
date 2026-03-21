@@ -1,7 +1,9 @@
 // App — Root component. Owns all pipeline state. Manages the cancel token pattern for Compose.
 // Threads resolvedStyles from the pipeline into PagesPanel to ensure render/paginate consistency.
+// Persists all pipeline output and settings to localStorage via useLocalStorage so state survives page reload.
 
 import { useState, useRef } from 'react'
+import { useLocalStorage } from './hooks/useLocalStorage.js'
 import './styles/global.css'
 import './styles/layout.css'
 import ControlsPanel from './components/ControlsPanel.jsx'
@@ -30,15 +32,15 @@ const DEFAULT_MARGINS = {
 }
 
 export default function App() {
-  const [styleSettings,     setStyleSettings]    = useState(DEFAULT_STYLES)
-  const [marginSettings,    setMarginSettings]   = useState(DEFAULT_MARGINS)
-  const [validationIssues,  setValidationIssues] = useState([])
-  const [normalizedBlocks,  setNormalizedBlocks] = useState([])
-  const [measuredBlocks,    setMeasuredBlocks]   = useState([])
-  const [paginatedPages,    setPaginatedPages]   = useState([])
-  const [resolvedStyles,    setResolvedStyles]   = useState(null)
-  const [logs,              setLogs]             = useState([])
-  const [lastRunAt,         setLastRunAt]        = useState(null)
+  const [styleSettings,     setStyleSettings]    = useLocalStorage('hemingway:styleSettings',    DEFAULT_STYLES)
+  const [marginSettings,    setMarginSettings]   = useLocalStorage('hemingway:marginSettings',   DEFAULT_MARGINS)
+  const [validationIssues,  setValidationIssues] = useLocalStorage('hemingway:validationIssues', [])
+  const [normalizedBlocks,  setNormalizedBlocks] = useLocalStorage('hemingway:normalizedBlocks', [])
+  const [measuredBlocks,    setMeasuredBlocks]   = useLocalStorage('hemingway:measuredBlocks',   [])
+  const [paginatedPages,    setPaginatedPages]   = useLocalStorage('hemingway:paginatedPages',   [])
+  const [resolvedStyles,    setResolvedStyles]   = useLocalStorage('hemingway:resolvedStyles',   null)
+  const [logs,              setLogs]             = useLocalStorage('hemingway:logs',             [])
+  const [lastRunAt,         setLastRunAt]        = useLocalStorage('hemingway:lastRunAt',        null)
   const [isRunning,         setIsRunning]        = useState(false)
 
   const cancelTokenRef = useRef({ cancelled: false })

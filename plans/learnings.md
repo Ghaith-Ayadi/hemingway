@@ -62,6 +62,14 @@ Decisions and learnings from each phase that aren't covered by the PRD or roadma
 
 ---
 
+## Phase 7 — Persistence
+
+- **`useLocalStorage` hook**: wraps `useState` — lazy initializer reads from `localStorage` on first render, setter writes on every call. Functional updaters are unwrapped inside the setter before serialisation (otherwise the function itself would be JSON-serialised as `null`)
+- **`isRunning` is intentionally NOT persisted**: it must always be `false` on load regardless of what happened before the page was closed
+- **`resolvedStyles` must be persisted alongside `paginatedPages`**: restoring pages without resolvedStyles leaves the renderer with no style data — pages won't display and PDF export is blocked until re-compose
+
+---
+
 ## Workflow
 
 - **`/done` skill**: project-level skill at `.claude/commands/done.md`. Steps: (1) update learnings, (2) commit, (3) push. Must be invoked manually at end of each unit of work. Skill files are loaded at session start — newly created skills require a new session to become available
