@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import './styles/global.css'
 import './styles/layout.css'
 import ControlsPanel from './components/ControlsPanel.jsx'
-import PagesPanel from './components/PagesPanel.jsx'
-import LogsPanel from './components/LogsPanel.jsx'
+import PagesPanel    from './components/PagesPanel.jsx'
+import LogsPanel     from './components/LogsPanel.jsx'
+import { runPipeline, PipelineCancelledError } from './pipeline/runPipeline.js'
 
 const DEFAULT_STYLES = {
   h1:        { fontSize: 128, lineHeight: 124 },
@@ -25,16 +26,17 @@ const DEFAULT_MARGINS = {
 }
 
 export default function App() {
-  const [styleSettings,    setStyleSettings]    = useState(DEFAULT_STYLES)
-  const [marginSettings,   setMarginSettings]   = useState(DEFAULT_MARGINS)
-  const [validationIssues, setValidationIssues] = useState([])
-  const [normalizedBlocks, setNormalizedBlocks] = useState([])
-  const [measuredBlocks,   setMeasuredBlocks]   = useState([])
-  const [paginatedPages,   setPaginatedPages]   = useState([])
-  const [logs,             setLogs]             = useState([])
-  const [lastRunAt,        setLastRunAt]        = useState(null)
-  const [lastExportSummary,setLastExportSummary]= useState(null)
-  const [isRunning,        setIsRunning]        = useState(false)
+  const [styleSettings,     setStyleSettings]    = useState(DEFAULT_STYLES)
+  const [marginSettings,    setMarginSettings]   = useState(DEFAULT_MARGINS)
+  const [validationIssues,  setValidationIssues] = useState([])
+  const [normalizedBlocks,  setNormalizedBlocks] = useState([])
+  const [measuredBlocks,    setMeasuredBlocks]   = useState([])
+  const [paginatedPages,    setPaginatedPages]   = useState([])
+  const [logs,              setLogs]             = useState([])
+  const [lastRunAt,         setLastRunAt]        = useState(null)
+  const [isRunning,         setIsRunning]        = useState(false)
+
+  const cancelTokenRef = useRef({ cancelled: false })
 
   function handleStyleChange(key, prop, value) {
     setStyleSettings(prev => {
@@ -48,7 +50,47 @@ export default function App() {
   }
 
   function handleCompose() {
-    // pipeline will go here
+    // Cancel any in-progress run
+    cancelTokenRef.current.cancelled = true
+    const token = { cancelled: false }
+    cancelTokenRef.current = token
+
+    // Clear output
+    setLogs([])
+    setValidationIssues([])
+    setNormalizedBlocks([])
+    setMeasuredBlocks([])
+    setPaginatedPages([])
+    setIsRunning(true)
+
+    function log(entry) {
+      if (token.cancelled) return
+      setLogs(prev => [...prev, { ...entry, timestamp: Date.now() }])
+    }
+
+    runPipeline({
+      styleSettings,
+      marginSettings,
+      cancelToken: token,
+      log,
+      onNormalizedBlocks: blocks => { if (!token.cancelled) setNormalizedBlocks(blocks) },
+      onMeasuredBlocks:   blocks => { if (!token.cancelled) setMeasuredBlocks(blocks) },
+      onValidationIssues: issues => { if (!token.cancelled) setValidationIssues(issues) },
+      onPageReady:        pages  => { if (!token.cancelled) setPaginatedPages([...pages]) },
+      onDone: ({ pages }) => {
+        if (!token.cancelled) {
+          setPaginatedPages(pages)
+          setLastRunAt(Date.now())
+        }
+      },
+    })
+    .catch(err => {
+      if (err instanceof PipelineCancelledError) return
+      log({ step: 'pipeline', message: `Error: ${err.message}`, type: 'error' })
+    })
+    .finally(() => {
+      if (!token.cancelled) setIsRunning(false)
+    })
   }
 
   function handleResetStyles() {
@@ -63,11 +105,10 @@ export default function App() {
     setPaginatedPages([])
     setLogs([])
     setLastRunAt(null)
-    setLastExportSummary(null)
   }
 
   function handleDownloadPdf() {
-    // PDF export will go here
+    // Phase 6
   }
 
   return (
@@ -85,7 +126,7 @@ export default function App() {
         hasPages={paginatedPages.length > 0}
       />
       <PagesPanel pages={paginatedPages} />
-      <LogsPanel logs={logs} />
+      <LogsPanel  logs={logs} />
     </div>
   )
 }
