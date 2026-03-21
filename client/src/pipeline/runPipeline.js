@@ -13,6 +13,7 @@ export async function runPipeline({
   cancelToken,
   log,
   onNormalizedBlocks,
+  onResolvedStyles,
   onMeasuredBlocks,
   onValidationIssues,
   onPageReady,
@@ -34,6 +35,7 @@ export async function runPipeline({
   // 3. Resolve styles
   check()
   const resolved = resolveStyles(styleSettings, marginSettings, log)
+  onResolvedStyles(resolved)
 
   // 4. Measure
   check()

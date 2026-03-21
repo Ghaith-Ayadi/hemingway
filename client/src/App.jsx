@@ -32,6 +32,7 @@ export default function App() {
   const [normalizedBlocks,  setNormalizedBlocks] = useState([])
   const [measuredBlocks,    setMeasuredBlocks]   = useState([])
   const [paginatedPages,    setPaginatedPages]   = useState([])
+  const [resolvedStyles,    setResolvedStyles]   = useState(null)
   const [logs,              setLogs]             = useState([])
   const [lastRunAt,         setLastRunAt]        = useState(null)
   const [isRunning,         setIsRunning]        = useState(false)
@@ -61,6 +62,7 @@ export default function App() {
     setNormalizedBlocks([])
     setMeasuredBlocks([])
     setPaginatedPages([])
+    setResolvedStyles(null)
     setIsRunning(true)
 
     function log(entry) {
@@ -73,8 +75,9 @@ export default function App() {
       marginSettings,
       cancelToken: token,
       log,
-      onNormalizedBlocks: blocks => { if (!token.cancelled) setNormalizedBlocks(blocks) },
-      onMeasuredBlocks:   blocks => { if (!token.cancelled) setMeasuredBlocks(blocks) },
+      onNormalizedBlocks: blocks   => { if (!token.cancelled) setNormalizedBlocks(blocks) },
+      onResolvedStyles:   resolved => { if (!token.cancelled) setResolvedStyles(resolved) },
+      onMeasuredBlocks:   blocks   => { if (!token.cancelled) setMeasuredBlocks(blocks) },
       onValidationIssues: issues => { if (!token.cancelled) setValidationIssues(issues) },
       onPageReady:        pages  => { if (!token.cancelled) setPaginatedPages([...pages]) },
       onDone: ({ pages }) => {
@@ -125,7 +128,7 @@ export default function App() {
         isRunning={isRunning}
         hasPages={paginatedPages.length > 0}
       />
-      <PagesPanel pages={paginatedPages} />
+      <PagesPanel pages={paginatedPages} resolvedStyles={resolvedStyles} />
       <LogsPanel  logs={logs} />
     </div>
   )
