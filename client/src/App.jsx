@@ -8,6 +8,7 @@ import ControlsPanel from './components/ControlsPanel.jsx'
 import PagesPanel    from './components/PagesPanel.jsx'
 import LogsPanel     from './components/LogsPanel.jsx'
 import { runPipeline, PipelineCancelledError } from './pipeline/runPipeline.js'
+import { exportPdf } from './pdf/exportPdf.js'
 
 const DEFAULT_STYLES = {
   h1:        { fontSize: 128, lineHeight: 124 },
@@ -114,7 +115,10 @@ export default function App() {
   }
 
   function handleDownloadPdf() {
-    // Phase 6
+    if (paginatedPages.length === 0 || !resolvedStyles) return
+    exportPdf(paginatedPages, resolvedStyles).catch(err => {
+      console.error('[exportPdf]', err)
+    })
   }
 
   return (

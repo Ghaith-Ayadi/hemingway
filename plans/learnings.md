@@ -50,6 +50,18 @@ Decisions and learnings from each phase that aren't covered by the PRD or roadma
 
 ---
 
+## Phase 6 — PDF Export
+
+- **`@react-pdf/renderer` bundle is ~1.8MB unminified**: expected and acceptable. Code-splitting via dynamic `import()` is the mitigation if load time becomes a concern
+- **Font files must be served statically and must be `.woff`, not `.woff2`**: react-pdf's font loader does not support `.woff2` — it throws `RangeError: Offset is outside the bounds of the DataView`. Use `.woff` files from `node_modules/@fontsource/inter/files/`, copied to `public/fonts/`. Must be re-copied if the package is reinstalled
+- **PDF pixel scaling**: all resolvedStyles values (font sizes, margins, spacing) are in pixels at 1600px render width. PDF is 595.28pt wide (A4). Scale factor = `595.28 / 1600 ≈ 0.372`. Applied via a `px()` helper to every dimension
+- **Line height in react-pdf is a ratio, not pixels**: `lineHeight` prop is a multiplier (e.g. `1.5`), not an absolute value. Converted as `lineHeight_px / fontSize_px`
+- **Inline rich text uses nested `<Text>` inside a parent `<Text>`**: react-pdf renders nested `<Text>` elements inline. A flat `<View>` with sibling `<Text>` elements would stack them vertically, breaking inline bold/italic
+- **Border shorthand not supported in react-pdf**: use `borderTopWidth`, `borderTopColor`, `borderTopStyle` separately — the `borderTop: '1pt solid #ddd'` shorthand silently does nothing
+- **`createElement` used instead of JSX in `exportPdf.js`**: the export function is a plain JS file (not `.jsx`). `createElement(HemingwayPdf, props)` avoids needing JSX transform in a non-component file
+
+---
+
 ## Workflow
 
 - **`/done` skill**: project-level skill at `.claude/commands/done.md`. Steps: (1) update learnings, (2) commit, (3) push. Must be invoked manually at end of each unit of work. Skill files are loaded at session start — newly created skills require a new session to become available
