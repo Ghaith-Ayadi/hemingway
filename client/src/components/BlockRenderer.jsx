@@ -1,3 +1,6 @@
+// BlockRenderer — Renders a single normalized block into DOM. Handles all supported block types with correct
+// styles matching measureBlocks. RichText renders flat RichTextRun[] with bold/italic/code formatting.
+
 function RichText({ runs = [] }) {
   return runs.map((run, i) => {
     const style = {

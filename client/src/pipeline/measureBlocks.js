@@ -1,3 +1,6 @@
+// measureBlocks — Awaits document.fonts.ready, then renders each block into a hidden DOM container
+// at contentWidth. Measured height = getBoundingClientRect().height + spaceBefore + spaceAfter.
+
 function renderBlockToEl(block, typeStyle) {
   const el = document.createElement('div')
 

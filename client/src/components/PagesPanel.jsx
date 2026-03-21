@@ -1,3 +1,6 @@
+// PagesPanel — Column 2. Uses ResizeObserver to measure available width, computes scale = width / 1600,
+// and wraps each A4Page in a correctly-sized container so scaled pages don't affect document flow.
+
 import { useRef, useState, useEffect } from 'react'
 import A4Page from './A4Page.jsx'
 

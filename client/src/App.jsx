@@ -1,3 +1,6 @@
+// App — Root component. Owns all pipeline state. Manages the cancel token pattern for Compose.
+// Threads resolvedStyles from the pipeline into PagesPanel to ensure render/paginate consistency.
+
 import { useState, useRef } from 'react'
 import './styles/global.css'
 import './styles/layout.css'

@@ -1,3 +1,5 @@
+/* layout.css — 3-column grid, shared column styles, per-column body styles (controls, pages, logs) */
+
 .app {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

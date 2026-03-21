@@ -1,3 +1,4 @@
+// resolveStyles — Maps styleSettings + marginSettings into a resolved object used by every downstream step.
 // Render at 1600px wide (scales down to fit column via transform: scale)
 // Height derived from A4 aspect ratio (1123/794)
 const PAGE_RENDER_WIDTH  = 1600

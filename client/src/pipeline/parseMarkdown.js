@@ -1,3 +1,6 @@
+// parseMarkdown — Fetches /testfile.md at runtime, parses it with remark-parse into an MDAST,
+// then walks the tree into normalized blocks with typed content as RichTextRun[].
+
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 

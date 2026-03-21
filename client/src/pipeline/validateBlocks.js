@@ -1,3 +1,6 @@
+// validateBlocks — Runs after measureBlocks. Flags giant blocks (height > 90% of contentHeight)
+// and blocks with nested children. Does not block pipeline execution.
+
 export function validateBlocks(measuredBlocks, resolvedStyles, log) {
   log({ step: 'validateBlocks', message: 'Scanning blocks…', type: 'info' })
 

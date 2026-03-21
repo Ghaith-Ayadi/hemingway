@@ -1,3 +1,5 @@
+// LogsPanel — Column 3. Renders pipeline log entries with timestamp, step label, and type-based colour (info / warning / error).
+
 function formatTime(ts) {
   return new Date(ts).toLocaleTimeString('en-US', {
     hour: '2-digit',

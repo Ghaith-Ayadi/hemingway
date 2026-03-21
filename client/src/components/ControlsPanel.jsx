@@ -1,3 +1,5 @@
+// ControlsPanel — Column 1. Typography/spacing/margin inputs and action buttons (Compose, Download PDF, Reset Styles, Clear Output).
+
 const TYPOGRAPHY_FIELDS = [
   { key: 'h1',        label: 'H1' },
   { key: 'h2',        label: 'H2' },

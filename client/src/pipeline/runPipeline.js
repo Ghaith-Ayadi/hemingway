@@ -1,3 +1,6 @@
+// runPipeline — Orchestrates all pipeline steps in sequence. Checks the cancel token between
+// each step so a new Compose click immediately stops the current run.
+
 import { parseMarkdown }   from './parseMarkdown.js'
 import { normalizeBlocks } from './normalizeBlocks.js'
 import { resolveStyles }   from './resolveStyles.js'

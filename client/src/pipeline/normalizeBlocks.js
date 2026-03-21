@@ -1,3 +1,6 @@
+// normalizeBlocks — Filters out unsupported block types and logs skips. Pass-through for v0.1
+// since parseMarkdown already produces the normalized format.
+
 const SUPPORTED_TYPES = new Set([
   'heading_1', 'heading_2', 'heading_3',
   'paragraph',

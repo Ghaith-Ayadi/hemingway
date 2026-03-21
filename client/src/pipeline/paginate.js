@@ -1,3 +1,6 @@
+// paginate — Places measured blocks into pages. Giant blocks get dedicated pages.
+// Calls onPageReady after each page is finalised for progressive rendering.
+
 function newPage(number, contentHeight) {
   return { number, blocks: [], usedHeight: 0, remainingHeight: contentHeight }
 }
