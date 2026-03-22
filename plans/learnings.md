@@ -70,6 +70,19 @@ Decisions and learnings from each phase that aren't covered by the PRD or roadma
 
 ---
 
+## v0.3 — Line-Level Splitting
+
+- **`renderBlockToEl` extracted to `renderBlock.js`**: shared by `measureBlocks` and `splitBlock` to guarantee measurement and layout agree on the same DOM structure
+- **Binary search on word count**: `splitBlock` measures partial renders in a hidden container at `contentWidth`, binary-searching for the max words that fit in `contentAvailable`. No text-metrics API needed — same DOM renderer used for measurement
+- **Character-level formatting preservation**: runs are flattened to per-character entries before splitting into word tokens, so formatting (bold/italic/code) boundaries within words are handled correctly
+- **`paginate` is now async**: the split path requires `await splitBlock(...)`. `runPipeline` now `await`s `paginate`
+- **Queue pattern replaces for-loop in paginate**: `measuredBlocks` becomes a mutable queue. When a block is split, the bottom fragment is inserted at the current index with `queue.splice(i, 0, bottom)` — it processes next and can be split again if still too tall
+- **`isContinuation: true`** on bottom fragments: suppresses `spaceBefore`/`marginTop` in `BlockRenderer` and `HemingwayPdf` so continuation blocks don't get extra top spacing on the new page
+- **Restyle button**: runs `resolveStyles → measureBlocks → validateBlocks → paginate` using `cachedBlocks` from the last Compose. Skips fetch + normalize — fast style iteration without a network call. `runPipeline` accepts optional `cachedBlocks` parameter; when set, steps 1–2 are skipped
+- **Widow/orphan rule**: after binary search finds `splitAt`, measure the bottom fragment — if ≤ 1 line it's a widow, reduce `splitAt` and retry. If the top fragment becomes ≤ 1 line it's an orphan, cancel the split entirely. The minimum for attempting any split is 2 full line heights in `contentAvailable` (guarantees both fragments can have ≥ 2 lines). Widow/orphan prevention is logged as `info` entries in the paginate step
+
+---
+
 ## v0.2 Phase 1 — Backend
 
 - **Express server lives in `/server/`**: ESM (`"type": "module"`), started with `node --watch index.js` so it hot-reloads on file saves without manual restart

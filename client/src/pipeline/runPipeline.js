@@ -1,5 +1,5 @@
 // runPipeline — Orchestrates all pipeline steps in sequence. Checks the cancel token between each step.
-// Accepts notionPageId: when set uses fetchNotion as step 1, otherwise falls back to parseMarkdown.
+// Accepts notionPageId (fetch source) or cachedBlocks (skip fetch+normalize for Restyle).
 
 import { parseMarkdown }   from './parseMarkdown.js'
 import { fetchNotion }     from './fetchNotion.js'
@@ -15,6 +15,7 @@ export async function runPipeline({
   styleSettings,
   marginSettings,
   notionPageId,
+  cachedBlocks,
   cancelToken,
   log,
   onNormalizedBlocks,
@@ -28,21 +29,28 @@ export async function runPipeline({
     if (cancelToken.cancelled) throw new PipelineCancelledError()
   }
 
-  // 1. Fetch + parse source
-  check()
-  log({
-    step: 'runPipeline',
-    message: notionPageId ? `Source: Notion (${notionPageId})` : 'Source: testfile.md',
-    type: 'info',
-  })
-  const raw = notionPageId
-    ? await fetchNotion(notionPageId, log)
-    : await parseMarkdown(log)
+  let normalized
 
-  // 2. Normalize (filter unsupported types)
-  check()
-  const normalized = normalizeBlocks(raw, log)
-  onNormalizedBlocks(normalized)
+  if (cachedBlocks) {
+    // Restyle path: skip fetch + normalize, use cached blocks from the last Compose
+    log({ step: 'restyle', message: `Using ${cachedBlocks.length} cached blocks — skipping fetch`, type: 'info' })
+    normalized = cachedBlocks
+  } else {
+    // Full path: fetch source + normalize
+    check()
+    log({
+      step: 'runPipeline',
+      message: notionPageId ? `Source: Notion (${notionPageId})` : 'Source: testfile.md',
+      type: 'info',
+    })
+    const raw = notionPageId
+      ? await fetchNotion(notionPageId, log)
+      : await parseMarkdown(log)
+
+    check()
+    normalized = normalizeBlocks(raw, log)
+    onNormalizedBlocks(normalized)
+  }
 
   // 3. Resolve styles
   check()
@@ -61,7 +69,7 @@ export async function runPipeline({
 
   // 6. Paginate
   check()
-  const pages = paginate(measured, resolved, issues, log, onPageReady)
+  const pages = await paginate(measured, resolved, issues, log, onPageReady)
 
   onDone({ pages })
 }

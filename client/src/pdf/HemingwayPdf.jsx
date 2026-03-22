@@ -50,7 +50,7 @@ function PdfBlock({ block, resolvedStyles }) {
     fontWeight:   400,
     fontSize:     px(ts.fontSize),
     lineHeight:   ts.fontSize > 0 ? ts.lineHeight / ts.fontSize : 1.5,
-    marginTop:    px(spaceBefore),
+    marginTop:    block.isContinuation ? 0 : px(spaceBefore),
     marginBottom: px(spaceAfter),
   }
 

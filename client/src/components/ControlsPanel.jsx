@@ -1,4 +1,5 @@
-// ControlsPanel — Column 1. Notion URL input, typography/spacing/margin inputs, and action buttons (Compose, Download PDF, Reset Styles, Clear Output).
+// ControlsPanel — Column 1. Notion URL input, typography/spacing/margin inputs, and action buttons.
+// Compose fetches + paginates. Restyle re-paginates with new styles without re-fetching.
 
 const TYPOGRAPHY_FIELDS = [
   { key: 'h1',        label: 'H1' },
@@ -30,11 +31,13 @@ export default function ControlsPanel({
   onStyleChange,
   onMarginChange,
   onCompose,
+  onRestyle,
   onResetStyles,
   onClearOutput,
   onDownloadPdf,
   isRunning,
   hasPages,
+  hasBlocks,
 }) {
   return (
     <div className="column">
@@ -59,6 +62,9 @@ export default function ControlsPanel({
         <div className="actions">
           <button className="btn-compose" onClick={onCompose}>
             {isRunning ? 'Composing…' : 'Compose'}
+          </button>
+          <button className="btn-secondary" onClick={onRestyle} disabled={isRunning || !hasBlocks}>
+            Restyle
           </button>
           <button className="btn-secondary" onClick={onDownloadPdf} disabled={!hasPages}>
             Download PDF

@@ -1,7 +1,7 @@
-// App — Root component. Owns all pipeline state. Manages the cancel token pattern for Compose.
+// App — Root component. Owns all pipeline state. Manages the cancel token pattern for Compose/Restyle.
 // Threads resolvedStyles from the pipeline into PagesPanel to ensure render/paginate consistency.
 // Persists all pipeline output and settings to localStorage via useLocalStorage so state survives page reload.
-// Passes notionPageId to runPipeline when a Notion URL is entered; falls back to testfile.md otherwise.
+// Restyle re-runs resolveStyles→measure→validate→paginate using cached normalizedBlocks, skipping fetch.
 
 import { useState, useRef } from 'react'
 import { useLocalStorage } from './hooks/useLocalStorage.js'
@@ -67,16 +67,17 @@ export default function App() {
     setMarginSettings(prev => ({ ...prev, [key]: value }))
   }
 
-  function handleCompose() {
-    // Cancel any in-progress run
+  // Shared pipeline runner — handles cancel token, state wiring, error logging.
+  // pipelineArgs are merged into the runPipeline call; clearBlocks controls whether
+  // normalizedBlocks is reset (Compose) or kept (Restyle).
+  function runWith({ clearBlocks, pipelineArgs }) {
     cancelTokenRef.current.cancelled = true
     const token = { cancelled: false }
     cancelTokenRef.current = token
 
-    // Clear output
     setLogs([])
     setValidationIssues([])
-    setNormalizedBlocks([])
+    if (clearBlocks) setNormalizedBlocks([])
     setMeasuredBlocks([])
     setPaginatedPages([])
     setResolvedStyles(null)
@@ -90,30 +91,47 @@ export default function App() {
     runPipeline({
       styleSettings,
       marginSettings,
-      notionPageId: extractPageId(notionUrl),
       cancelToken: token,
       log,
       onNormalizedBlocks: blocks   => { if (!token.cancelled) setNormalizedBlocks(blocks) },
       onResolvedStyles:   resolved => { if (!token.cancelled) setResolvedStyles(resolved) },
       onMeasuredBlocks:   blocks   => { if (!token.cancelled) setMeasuredBlocks(blocks) },
-      onValidationIssues: issues => { if (!token.cancelled) setValidationIssues(issues) },
-      onPageReady:        pages  => { if (!token.cancelled) setPaginatedPages([...pages]) },
+      onValidationIssues: issues   => { if (!token.cancelled) setValidationIssues(issues) },
+      onPageReady:        pages    => { if (!token.cancelled) setPaginatedPages([...pages]) },
       onDone: ({ pages }) => {
         if (!token.cancelled) {
           setPaginatedPages(pages)
           setLastRunAt(Date.now())
         }
       },
+      ...pipelineArgs,
     })
     .catch(err => {
       if (err instanceof PipelineCancelledError) return
       console.error('[pipeline]', err)
-      // Split multi-line error messages into separate log entries for readability
-      const lines = err.message.split('\n').filter(Boolean)
-      lines.forEach(line => log({ step: 'pipeline', message: line, type: 'error' }))
+      err.message.split('\n').filter(Boolean).forEach(line =>
+        log({ step: 'pipeline', message: line, type: 'error' })
+      )
     })
     .finally(() => {
       if (!token.cancelled) setIsRunning(false)
+    })
+  }
+
+  function handleCompose() {
+    runWith({
+      clearBlocks:  true,
+      pipelineArgs: { notionPageId: extractPageId(notionUrl) },
+    })
+  }
+
+  // Restyle: re-run resolveStyles → measure → validate → paginate using cached blocks.
+  // Does not re-fetch or re-parse the source — fast style iteration without a network call.
+  function handleRestyle() {
+    if (normalizedBlocks.length === 0) return
+    runWith({
+      clearBlocks:  false,
+      pipelineArgs: { cachedBlocks: normalizedBlocks },
     })
   }
 
@@ -148,11 +166,13 @@ export default function App() {
         onStyleChange={handleStyleChange}
         onMarginChange={handleMarginChange}
         onCompose={handleCompose}
+        onRestyle={handleRestyle}
         onResetStyles={handleResetStyles}
         onClearOutput={handleClearOutput}
         onDownloadPdf={handleDownloadPdf}
         isRunning={isRunning}
         hasPages={paginatedPages.length > 0}
+        hasBlocks={normalizedBlocks.length > 0}
       />
       <PagesPanel pages={paginatedPages} resolvedStyles={resolvedStyles} />
       <LogsPanel  logs={logs} />

@@ -1,5 +1,5 @@
 // BlockRenderer — Renders a single normalized block into DOM. Handles all supported block types with correct
-// styles matching measureBlocks. RichText renders flat RichTextRun[] with bold/italic/code formatting.
+// styles matching measureBlocks. Continuation blocks (isContinuation: true) suppress spaceBefore.
 
 function RichText({ runs = [] }) {
   return runs.map((run, i) => {
@@ -20,14 +20,14 @@ export default function BlockRenderer({ block, resolvedStyles }) {
   const ts = typeStyles[block.type] ?? { fontSize: 16, lineHeight: 24 }
 
   const base = {
-    fontFamily:  "'Inter', sans-serif",
-    fontSize:    ts.fontSize,
-    lineHeight:  `${ts.lineHeight}px`,
-    marginTop:   spaceBefore,
+    fontFamily:   "'Inter', sans-serif",
+    fontSize:     ts.fontSize,
+    lineHeight:   `${ts.lineHeight}px`,
+    marginTop:    block.isContinuation ? 0 : spaceBefore,
     marginBottom: spaceAfter,
-    wordBreak:   'break-word',
-    width:       '100%',
-    boxSizing:   'border-box',
+    wordBreak:    'break-word',
+    width:        '100%',
+    boxSizing:    'border-box',
   }
 
   switch (block.type) {
