@@ -70,6 +70,25 @@ Decisions and learnings from each phase that aren't covered by the PRD or roadma
 
 ---
 
+## v0.2 Phase 1 — Backend
+
+- **Express server lives in `/server/`**: ESM (`"type": "module"`), started with `node --watch index.js` so it hot-reloads on file saves without manual restart
+- **CORS must allow any localhost port**: Vite may start on 5174 (or higher) if 5173 is occupied. Using a regex `origin: /^http:\/\/localhost(:\d+)?$/` covers all ports instead of hardcoding 5173
+- **`@notionhq/client` paginates automatically via cursor**: loop with `has_more` + `next_cursor` until exhausted. A 299-block page takes ~4.6 seconds — this is 3 sequential Notion API calls
+- **Real token goes in `server/.env`, never `server/.env.example`**: `.env.example` is committed; `.env` is gitignored. Accidentally putting the token in `.env.example` exposes it on GitHub
+- **Notion returns 404 when the page isn't shared with the integration**: the error message says "Make sure the relevant pages and databases are shared with your integration". Must share the page explicitly via Notion's Share menu
+
+## v0.2 Phase 2 — Input Swap
+
+- **`fetchNotion` returns the same normalized block format as `parseMarkdown`**: both are interchangeable as pipeline step 1 — `normalizeBlocks` and everything downstream is unchanged
+- **Numbered list index must be tracked manually**: Notion returns `numbered_list_item` blocks individually with no index field. Counter resets to 0 whenever a non-numbered block appears
+- **Notion callout icon is an object, not a string**: `{ type: 'emoji', emoji: '💡' }` or `{ type: 'external', ... }`. Extract `.emoji` for emoji icons, treat external icons as null
+- **Image URLs must be proxied**: Notion file images are signed S3 URLs — CORS-restricted and expire. Rewrite to `/api/image?url=...` so the browser and react-pdf fetch through the local server
+- **`AbortSignal.timeout()` throws a `DOMException` with message "The user aborted a request."**: not "timeout error" as expected. Check `err.name === 'TimeoutError'` to distinguish from a genuine connection failure and show a meaningful message
+- **Page URL extraction**: split on `-`, take the last segment, verify length is 32. Works for both `notion.so/Title-{id}` and `notion.so/workspace/Title-{id}` URL formats
+
+---
+
 ## Workflow
 
 - **`/done` skill**: project-level skill at `.claude/commands/done.md`. Steps: (1) update learnings, (2) commit, (3) push. Must be invoked manually at end of each unit of work. Skill files are loaded at session start — newly created skills require a new session to become available

@@ -1,7 +1,8 @@
-// runPipeline — Orchestrates all pipeline steps in sequence. Checks the cancel token between
-// each step so a new Compose click immediately stops the current run.
+// runPipeline — Orchestrates all pipeline steps in sequence. Checks the cancel token between each step.
+// Accepts notionPageId: when set uses fetchNotion as step 1, otherwise falls back to parseMarkdown.
 
 import { parseMarkdown }   from './parseMarkdown.js'
+import { fetchNotion }     from './fetchNotion.js'
 import { normalizeBlocks } from './normalizeBlocks.js'
 import { resolveStyles }   from './resolveStyles.js'
 import { measureBlocks }   from './measureBlocks.js'
@@ -13,6 +14,7 @@ export class PipelineCancelledError extends Error {}
 export async function runPipeline({
   styleSettings,
   marginSettings,
+  notionPageId,
   cancelToken,
   log,
   onNormalizedBlocks,
@@ -26,11 +28,18 @@ export async function runPipeline({
     if (cancelToken.cancelled) throw new PipelineCancelledError()
   }
 
-  // 1. Parse
+  // 1. Fetch + parse source
   check()
-  const raw = await parseMarkdown(log)
+  log({
+    step: 'runPipeline',
+    message: notionPageId ? `Source: Notion (${notionPageId})` : 'Source: testfile.md',
+    type: 'info',
+  })
+  const raw = notionPageId
+    ? await fetchNotion(notionPageId, log)
+    : await parseMarkdown(log)
 
-  // 2. Normalize
+  // 2. Normalize (filter unsupported types)
   check()
   const normalized = normalizeBlocks(raw, log)
   onNormalizedBlocks(normalized)

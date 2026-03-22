@@ -1,4 +1,4 @@
-// ControlsPanel — Column 1. Typography/spacing/margin inputs and action buttons (Compose, Download PDF, Reset Styles, Clear Output).
+// ControlsPanel — Column 1. Notion URL input, typography/spacing/margin inputs, and action buttons (Compose, Download PDF, Reset Styles, Clear Output).
 
 const TYPOGRAPHY_FIELDS = [
   { key: 'h1',        label: 'H1' },
@@ -23,6 +23,8 @@ const SPACING_FIELDS = [
 ]
 
 export default function ControlsPanel({
+  notionUrl,
+  onNotionUrlChange,
   styleSettings,
   marginSettings,
   onStyleChange,
@@ -38,6 +40,20 @@ export default function ControlsPanel({
     <div className="column">
       <div className="column-header">Controls</div>
       <div className="column-body controls-body">
+
+        {/* Source */}
+        <div className="settings-section">
+          <div className="settings-section-title">Source</div>
+          <div className="setting-row">
+            <input
+              className="setting-input setting-input-url"
+              type="text"
+              placeholder="Notion page URL (leave empty for testfile.md)"
+              value={notionUrl}
+              onChange={e => onNotionUrlChange(e.target.value)}
+            />
+          </div>
+        </div>
 
         {/* Actions */}
         <div className="actions">

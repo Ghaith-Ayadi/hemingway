@@ -1,6 +1,7 @@
 // App — Root component. Owns all pipeline state. Manages the cancel token pattern for Compose.
 // Threads resolvedStyles from the pipeline into PagesPanel to ensure render/paginate consistency.
 // Persists all pipeline output and settings to localStorage via useLocalStorage so state survives page reload.
+// Passes notionPageId to runPipeline when a Notion URL is entered; falls back to testfile.md otherwise.
 
 import { useState, useRef } from 'react'
 import { useLocalStorage } from './hooks/useLocalStorage.js'
@@ -31,7 +32,17 @@ const DEFAULT_MARGINS = {
   right:  80,
 }
 
+// Extract the Notion page ID from a full URL (last hyphen-separated segment before any query string)
+function extractPageId(url) {
+  if (!url) return null
+  const clean = url.split('?')[0].split('#')[0]
+  const parts = clean.split('-')
+  const last  = parts[parts.length - 1]
+  return last.length === 32 ? last : null
+}
+
 export default function App() {
+  const [notionUrl,         setNotionUrl]        = useLocalStorage('hemingway:notionUrl',        '')
   const [styleSettings,     setStyleSettings]    = useLocalStorage('hemingway:styleSettings',    DEFAULT_STYLES)
   const [marginSettings,    setMarginSettings]   = useLocalStorage('hemingway:marginSettings',   DEFAULT_MARGINS)
   const [validationIssues,  setValidationIssues] = useLocalStorage('hemingway:validationIssues', [])
@@ -79,6 +90,7 @@ export default function App() {
     runPipeline({
       styleSettings,
       marginSettings,
+      notionPageId: extractPageId(notionUrl),
       cancelToken: token,
       log,
       onNormalizedBlocks: blocks   => { if (!token.cancelled) setNormalizedBlocks(blocks) },
@@ -95,7 +107,10 @@ export default function App() {
     })
     .catch(err => {
       if (err instanceof PipelineCancelledError) return
-      log({ step: 'pipeline', message: `Error: ${err.message}`, type: 'error' })
+      console.error('[pipeline]', err)
+      // Split multi-line error messages into separate log entries for readability
+      const lines = err.message.split('\n').filter(Boolean)
+      lines.forEach(line => log({ step: 'pipeline', message: line, type: 'error' }))
     })
     .finally(() => {
       if (!token.cancelled) setIsRunning(false)
@@ -126,6 +141,8 @@ export default function App() {
   return (
     <div className="app">
       <ControlsPanel
+        notionUrl={notionUrl}
+        onNotionUrlChange={setNotionUrl}
         styleSettings={styleSettings}
         marginSettings={marginSettings}
         onStyleChange={handleStyleChange}
