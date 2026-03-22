@@ -41,9 +41,35 @@ function PdfRichText({ runs = [], style }) {
   )
 }
 
+// Splits runs at \n boundaries and renders each chunk with paragraphSpacing below it
+function PdfParagraphContent({ runs = [], style, paragraphSpacing = 0 }) {
+  if (runs.length === 0) return null
+  if (!paragraphSpacing) return <PdfRichText runs={runs} style={style} />
+
+  const groups = []
+  let current = []
+  for (const run of runs) {
+    const parts = run.text.split('\n')
+    for (let i = 0; i < parts.length; i++) {
+      if (i > 0) { groups.push(current); current = [] }
+      if (parts[i]) current.push({ ...run, text: parts[i] })
+    }
+  }
+  if (current.length > 0) groups.push(current)
+
+  return groups.map((group, i) => (
+    <PdfRichText
+      key={i}
+      runs={group}
+      style={{ ...style, marginBottom: i < groups.length - 1 ? px(paragraphSpacing) : 0 }}
+    />
+  ))
+}
+
 function PdfBlock({ block, resolvedStyles }) {
   const { blocks: typeStyles } = resolvedStyles
-  const ts = typeStyles[block.type] ?? { fontSize: 16, lineHeight: 24, spaceBefore: 0, spaceAfter: 0 }
+  const ts = typeStyles[block.type] ?? { fontSize: 16, lineHeight: 24, spaceBefore: 0, spaceAfter: 0, paragraphSpacing: 0 }
+  const ps = ts.paragraphSpacing ?? 0
 
   const base = {
     fontFamily:   'Inter',
@@ -62,13 +88,13 @@ function PdfBlock({ block, resolvedStyles }) {
       return <PdfRichText runs={block.content} style={{ ...base, fontWeight: 700 }} />
 
     case 'paragraph':
-      return <PdfRichText runs={block.content} style={base} />
+      return <PdfParagraphContent runs={block.content} style={base} paragraphSpacing={ps} />
 
     case 'bulleted_list_item':
       return (
         <View style={{ flexDirection: 'row', marginTop: px(ts.spaceBefore ?? 0), marginBottom: px(ts.spaceAfter ?? 0), paddingLeft: px(24) }}>
           <Text style={{ ...base, marginTop: 0, marginBottom: 0, marginRight: px(10) }}>•</Text>
-          <PdfRichText runs={block.content} style={{ ...base, marginTop: 0, marginBottom: 0, flex: 1 }} />
+          <PdfParagraphContent runs={block.content} style={{ ...base, marginTop: 0, marginBottom: 0, flex: 1 }} paragraphSpacing={ps} />
         </View>
       )
 

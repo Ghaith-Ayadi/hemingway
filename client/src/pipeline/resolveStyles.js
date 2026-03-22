@@ -21,9 +21,9 @@ export function resolveStyles(styleSettings, marginSettings, log) {
   const blocks = {}
 
   for (const [key, types] of Object.entries(STYLE_KEY_TO_TYPES)) {
-    const { fontSize, lineHeight, spaceBefore, spaceAfter } = styleSettings[key]
+    const { fontSize, lineHeight, spaceBefore, spaceAfter, paragraphSpacing } = styleSettings[key]
     for (const type of types) {
-      blocks[type] = { fontSize, lineHeight, spaceBefore: spaceBefore ?? 0, spaceAfter: spaceAfter ?? 0 }
+      blocks[type] = { fontSize, lineHeight, spaceBefore: spaceBefore ?? 0, spaceAfter: spaceAfter ?? 0, paragraphSpacing: paragraphSpacing ?? 0 }
     }
   }
 

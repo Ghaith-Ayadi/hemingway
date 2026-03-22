@@ -233,6 +233,14 @@
   text-align: center;
 }
 
+.col-header-narrow {
+  width: 52px;
+}
+
+.setting-input-narrow {
+  width: 52px;
+}
+
 /* Typography rows use flex instead of grid */
 .typography-row {
   display: flex !important;

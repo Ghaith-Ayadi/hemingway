@@ -86,6 +86,7 @@ export default function ControlsPanel({
             <span></span>
             <span className="col-header-label">size / lh</span>
             <span className="col-header-label">↑ / ↓</span>
+            <span className="col-header-label col-header-narrow">ps</span>
           </div>
           {TYPOGRAPHY_FIELDS.map(({ key, label }) => (
             <div key={key} className="setting-row typography-row">
@@ -100,6 +101,7 @@ export default function ControlsPanel({
                 <span className="setting-divider">/</span>
                 <input className="setting-input" type="number" value={styleSettings[key].spaceAfter} onChange={e => onStyleChange(key, 'spaceAfter', Number(e.target.value))} />
               </div>
+              <input className="setting-input setting-input-narrow" type="number" value={styleSettings[key].paragraphSpacing ?? 0} onChange={e => onStyleChange(key, 'paragraphSpacing', Number(e.target.value))} />
             </div>
           ))}
           {/* Style action buttons */}

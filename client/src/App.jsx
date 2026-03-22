@@ -14,20 +14,20 @@ import { runPipeline, PipelineCancelledError } from './pipeline/runPipeline.js'
 import { exportPdf } from './pdf/exportPdf.js'
 
 const DEFAULT_STYLES = {
-  h1:        { fontSize: 128, lineHeight: 124, spaceBefore: 96,  spaceAfter: 16 },
-  h2:        { fontSize: 96,  lineHeight: 96,  spaceBefore: 64,  spaceAfter: 12 },
-  h3:        { fontSize: 32,  lineHeight: 48,  spaceBefore: 40,  spaceAfter: 8  },
-  paragraph: { fontSize: 32,  lineHeight: 48,  spaceBefore: 0,   spaceAfter: 12 },
-  list:      { fontSize: 32,  lineHeight: 48,  spaceBefore: 0,   spaceAfter: 8  },
-  quote:     { fontSize: 32,  lineHeight: 48,  spaceBefore: 24,  spaceAfter: 24 },
-  code:      { fontSize: 28,  lineHeight: 44,  spaceBefore: 24,  spaceAfter: 24 },
+  h1:        { fontSize: 128, lineHeight: 124, spaceBefore: 96,  spaceAfter: 64, paragraphSpacing: 0  },
+  h2:        { fontSize: 96,  lineHeight: 96,  spaceBefore: 64,  spaceAfter: 48, paragraphSpacing: 0  },
+  h3:        { fontSize: 40,  lineHeight: 48,  spaceBefore: 64,  spaceAfter: 16, paragraphSpacing: 0  },
+  paragraph: { fontSize: 32,  lineHeight: 48,  spaceBefore: 0,   spaceAfter: 32, paragraphSpacing: 32 },
+  list:      { fontSize: 32,  lineHeight: 48,  spaceBefore: 0,   spaceAfter: 8,  paragraphSpacing: 0  },
+  quote:     { fontSize: 32,  lineHeight: 48,  spaceBefore: 24,  spaceAfter: 24, paragraphSpacing: 24 },
+  code:      { fontSize: 28,  lineHeight: 44,  spaceBefore: 24,  spaceAfter: 24, paragraphSpacing: 0  },
 }
 
 const DEFAULT_MARGINS = {
-  top:    72,
-  bottom: 72,
-  left:   80,
-  right:  80,
+  top:    96,
+  bottom: 160,
+  left:   64,
+  right:  64,
 }
 
 // Extract the Notion page ID from a full URL (last hyphen-separated segment before any query string)
@@ -41,13 +41,13 @@ function extractPageId(url) {
 
 export default function App() {
   const [notionUrl,         setNotionUrl]        = useLocalStorage('hemingway:notionUrl',        '')
-  const [styleSettings,     setStyleSettings]    = useLocalStorage('hemingway:styleSettings:v2',  DEFAULT_STYLES)
+  const [styleSettings,     setStyleSettings]    = useLocalStorage('hemingway:styleSettings:v3',  DEFAULT_STYLES)
   const [marginSettings,    setMarginSettings]   = useLocalStorage('hemingway:marginSettings',   DEFAULT_MARGINS)
   const [validationIssues,  setValidationIssues] = useLocalStorage('hemingway:validationIssues', [])
   const [normalizedBlocks,  setNormalizedBlocks] = useLocalStorage('hemingway:normalizedBlocks', [])
   const [measuredBlocks,    setMeasuredBlocks]   = useLocalStorage('hemingway:measuredBlocks',   [])
   const [paginatedPages,    setPaginatedPages]   = useLocalStorage('hemingway:paginatedPages',   [])
-  const [resolvedStyles,    setResolvedStyles]   = useLocalStorage('hemingway:resolvedStyles:v2', null)
+  const [resolvedStyles,    setResolvedStyles]   = useLocalStorage('hemingway:resolvedStyles:v3', null)
   const [logs,              setLogs]             = useLocalStorage('hemingway:logs',             [])
   const [lastRunAt,         setLastRunAt]        = useLocalStorage('hemingway:lastRunAt',        null)
   const [isRunning,         setIsRunning]        = useState(false)

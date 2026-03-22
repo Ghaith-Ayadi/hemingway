@@ -15,9 +15,32 @@ function RichText({ runs = [] }) {
   })
 }
 
+// Splits runs at \n boundaries, rendering each chunk as a div with paragraphSpacing below it.
+function ParagraphContent({ runs = [], paragraphSpacing = 0 }) {
+  if (!paragraphSpacing) return <RichText runs={runs} />
+
+  // Build an array of run-groups split at \n
+  const groups = []
+  let current = []
+  for (const run of runs) {
+    const parts = run.text.split('\n')
+    for (let i = 0; i < parts.length; i++) {
+      if (i > 0) { groups.push(current); current = [] }
+      if (parts[i]) current.push({ ...run, text: parts[i] })
+    }
+  }
+  if (current.length > 0) groups.push(current)
+
+  return groups.map((group, i) => (
+    <div key={i} style={{ marginBottom: i < groups.length - 1 ? paragraphSpacing : 0 }}>
+      <RichText runs={group} />
+    </div>
+  ))
+}
+
 export default function BlockRenderer({ block, resolvedStyles }) {
   const { blocks: typeStyles } = resolvedStyles
-  const ts = typeStyles[block.type] ?? { fontSize: 16, lineHeight: 24, spaceBefore: 0, spaceAfter: 0 }
+  const ts = typeStyles[block.type] ?? { fontSize: 16, lineHeight: 24, spaceBefore: 0, spaceAfter: 0, paragraphSpacing: 0 }
 
   const base = {
     fontFamily:   "'Inter', sans-serif",
@@ -44,7 +67,7 @@ export default function BlockRenderer({ block, resolvedStyles }) {
     case 'paragraph':
       return (
         <div style={base}>
-          <RichText runs={block.content} />
+          <ParagraphContent runs={block.content} paragraphSpacing={ts.paragraphSpacing} />
         </div>
       )
 
@@ -52,7 +75,7 @@ export default function BlockRenderer({ block, resolvedStyles }) {
       return (
         <div style={{ ...base, paddingLeft: 24, display: 'flex', gap: 10 }}>
           <span style={{ flexShrink: 0, userSelect: 'none' }}>•</span>
-          <span><RichText runs={block.content} /></span>
+          <span><ParagraphContent runs={block.content} paragraphSpacing={ts.paragraphSpacing} /></span>
         </div>
       )
 
@@ -60,7 +83,7 @@ export default function BlockRenderer({ block, resolvedStyles }) {
       return (
         <div style={{ ...base, paddingLeft: 24, display: 'flex', gap: 10 }}>
           <span style={{ flexShrink: 0, userSelect: 'none' }}>{block.index}.</span>
-          <span><RichText runs={block.content} /></span>
+          <span><ParagraphContent runs={block.content} paragraphSpacing={ts.paragraphSpacing} /></span>
         </div>
       )
 
@@ -71,7 +94,7 @@ export default function BlockRenderer({ block, resolvedStyles }) {
             {block.checked ? '☑' : '☐'}
           </span>
           <span style={{ textDecoration: block.checked ? 'line-through' : 'none', opacity: block.checked ? 0.5 : 1 }}>
-            <RichText runs={block.content} />
+            <ParagraphContent runs={block.content} paragraphSpacing={ts.paragraphSpacing} />
           </span>
         </div>
       )
@@ -79,7 +102,7 @@ export default function BlockRenderer({ block, resolvedStyles }) {
     case 'quote':
       return (
         <div style={{ ...base, paddingLeft: 20, borderLeft: '3px solid #ccc', color: '#555' }}>
-          <RichText runs={block.content} />
+          <ParagraphContent runs={block.content} paragraphSpacing={ts.paragraphSpacing} />
         </div>
       )
 
@@ -87,7 +110,7 @@ export default function BlockRenderer({ block, resolvedStyles }) {
       return (
         <div style={{ ...base, padding: '12px 16px', background: '#f7f7f7', borderRadius: 6, display: 'flex', gap: 12 }}>
           {block.icon && <span style={{ flexShrink: 0 }}>{block.icon}</span>}
-          <span><RichText runs={block.content} /></span>
+          <span><ParagraphContent runs={block.content} paragraphSpacing={ts.paragraphSpacing} /></span>
         </div>
       )
 

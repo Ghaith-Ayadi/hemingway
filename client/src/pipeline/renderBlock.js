@@ -1,8 +1,10 @@
 // renderBlock — Shared DOM rendering utility used by measureBlocks and splitBlock.
 // Creates a styled div matching BlockRenderer exactly so measurement and layout agree.
+// Splits content at \n boundaries and inserts paragraphSpacing between chunks.
 
 export function renderBlockToEl(block, typeStyle) {
   const el = document.createElement('div')
+  const ps = typeStyle.paragraphSpacing ?? 0
 
   const base = `
     font-family: 'Inter', sans-serif;
@@ -30,15 +32,27 @@ export function renderBlockToEl(block, typeStyle) {
       break
     case 'divider':
       el.style.cssText = 'width: 100%; height: 1px;'
-      break
+      return el
     case 'image':
       el.style.cssText = 'width: 100%; height: 200px;'
-      break
+      return el
     default:
       el.style.cssText = base
   }
 
-  el.textContent = block.content.map(r => r.text).join('')
+  const fullText = block.content?.map(r => r.text).join('') ?? ''
+  const chunks = fullText.split('\n')
+
+  if (ps > 0 && chunks.length > 1) {
+    chunks.forEach((chunk, i) => {
+      const p = document.createElement('div')
+      p.textContent = chunk
+      if (i < chunks.length - 1) p.style.marginBottom = ps + 'px'
+      el.appendChild(p)
+    })
+  } else {
+    el.textContent = fullText
+  }
 
   return el
 }
