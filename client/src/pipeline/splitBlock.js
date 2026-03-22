@@ -60,11 +60,13 @@ let _splitCounter = 0
 // Widow rule: bottom fragment must have ≥ 2 lines; if not, splitAt is reduced until it does.
 // Orphan rule: top fragment must have ≥ 2 lines; if not, the split is cancelled entirely.
 export async function splitBlock(block, resolvedStyles, availableHeight, log = () => {}) {
-  const { spaceBefore, spaceAfter, contentWidth, blocks: typeStyles } = resolvedStyles
-  const ts = typeStyles[block.type] ?? { fontSize: 16, lineHeight: 24 }
+  const { contentWidth, blocks: typeStyles } = resolvedStyles
+  const ts = typeStyles[block.type] ?? { fontSize: 16, lineHeight: 24, spaceBefore: 0, spaceAfter: 0 }
+  const sbefore = ts.spaceBefore ?? 0
+  const safter  = ts.spaceAfter  ?? 0
 
-  const topSpaceBefore   = block.isContinuation ? 0 : spaceBefore
-  const contentAvailable = availableHeight - topSpaceBefore - spaceAfter
+  const topSpaceBefore   = block.isContinuation ? 0 : sbefore
+  const contentAvailable = availableHeight - topSpaceBefore - safter
 
   // Need room for at least 2 lines (1 here + 1 on next page — anything less creates widow/orphan)
   if (contentAvailable < ts.lineHeight * 2) return null
@@ -155,9 +157,9 @@ export async function splitBlock(block, resolvedStyles, availableHeight, log = (
   }
 
   const topContentH    = measureWords(splitAt)
-  const topHeight      = topSpaceBefore + topContentH + spaceAfter
+  const topHeight      = topSpaceBefore + topContentH + safter
   const bottomContentH = measureContent(bottomContent)
-  const bottomHeight   = bottomContentH + spaceAfter
+  const bottomHeight   = bottomContentH + safter  // continuation: no spaceBefore
 
   document.body.removeChild(container)
 

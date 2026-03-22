@@ -11,7 +11,7 @@ function newPage(number, contentHeight) {
 export async function paginate(measuredBlocks, resolvedStyles, issues, log, onPageReady) {
   log({ step: 'paginate', message: 'Paginating…', type: 'info' })
 
-  const { contentHeight, blocks: typeStyles, spaceBefore, spaceAfter } = resolvedStyles
+  const { contentHeight, blocks: typeStyles } = resolvedStyles
   const giantBlockIds = new Set(issues.filter(i => i.type === 'giant_block').map(i => i.blockId))
 
   const pages   = []
@@ -32,6 +32,15 @@ export async function paginate(measuredBlocks, resolvedStyles, issues, log, onPa
 
   while (i < queue.length) {
     const block = queue[i++]
+
+    // Divider → forced page break (the divider itself is not rendered)
+    if (block.type === 'divider') {
+      if (current.blocks.length > 0) {
+        pushCurrent()
+        log({ step: 'paginate', message: 'Divider — forced page break', type: 'info' })
+      }
+      continue
+    }
 
     // Giant image — scale to fit on its own page
     if (giantBlockIds.has(block.id) && block.type === 'image') {
@@ -64,7 +73,9 @@ export async function paginate(measuredBlocks, resolvedStyles, issues, log, onPa
     // Doesn't fit — attempt a line-level split if there's room and the page isn't empty
     if (canSplit(block) && current.blocks.length > 0) {
       const ts = typeStyles[block.type] ?? { fontSize: 16, lineHeight: 24 }
-      const minNeeded = (block.isContinuation ? 0 : spaceBefore) + ts.lineHeight + spaceAfter
+      const tsb = ts.spaceBefore ?? 0
+      const tsa = ts.spaceAfter  ?? 0
+      const minNeeded = (block.isContinuation ? 0 : tsb) + ts.lineHeight + tsa
 
       if (current.remainingHeight >= minNeeded) {
         const fragments = await splitBlock(block, resolvedStyles, current.remainingHeight, log)

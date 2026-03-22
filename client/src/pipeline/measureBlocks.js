@@ -23,12 +23,12 @@ export async function measureBlocks(blocks, resolvedStyles, log) {
   const measured = []
 
   for (const block of blocks) {
-    const typeStyle = resolvedStyles.blocks[block.type] ?? { fontSize: 16, lineHeight: 24 }
+    const typeStyle = resolvedStyles.blocks[block.type] ?? { fontSize: 16, lineHeight: 24, spaceBefore: 0, spaceAfter: 0 }
     const el = renderBlockToEl(block, typeStyle)
     container.appendChild(el)
 
     const contentHeight = el.getBoundingClientRect().height
-    const totalHeight   = contentHeight + resolvedStyles.spaceBefore + resolvedStyles.spaceAfter
+    const totalHeight   = contentHeight + (typeStyle.spaceBefore ?? 0) + (typeStyle.spaceAfter ?? 0)
 
     container.removeChild(el)
 

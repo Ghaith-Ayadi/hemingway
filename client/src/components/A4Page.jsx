@@ -30,19 +30,6 @@ export default function A4Page({ page, resolvedStyles }) {
         ))}
       </div>
 
-      {/* Page number */}
-      <div style={{
-        position:   'absolute',
-        bottom:     24,
-        width:      '100%',
-        textAlign:  'center',
-        fontSize:   22,
-        color:      '#bbb',
-        fontFamily: "'Inter', sans-serif",
-        userSelect: 'none',
-      }}>
-        {page.number}
-      </div>
     </div>
   )
 }

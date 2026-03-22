@@ -24,7 +24,9 @@
 }
 
 .column-header {
-  padding: 16px 20px;
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 20px;
   border-bottom: 1px solid var(--border);
   font-size: 11px;
   font-weight: 600;
@@ -32,6 +34,8 @@
   text-transform: uppercase;
   color: var(--text-muted);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .column-body {
@@ -157,6 +161,153 @@
   box-sizing: border-box;
   font-size: 11px;
   grid-column: 1 / -1;
+}
+
+/* Pages header with actions */
+.pages-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pages-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-header-action {
+  padding: 4px 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.btn-header-action:hover {
+  color: var(--text);
+  border-color: #444;
+}
+
+.btn-header-action:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.btn-header-primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.btn-header-primary:hover {
+  opacity: 0.85;
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.btn-header-primary:disabled {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border);
+  opacity: 0.35;
+}
+
+/* Typography column headers */
+.typography-col-headers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+.typography-col-headers span:first-child {
+  flex: 1;
+}
+
+.col-header-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  width: 116px;   /* matches setting-input-pair width */
+  text-align: center;
+}
+
+/* Typography rows use flex instead of grid */
+.typography-row {
+  display: flex !important;
+  grid-template-columns: unset !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.typography-row .setting-label {
+  flex: 1;
+  min-width: 60px;
+}
+
+/* Style action buttons row */
+.style-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.style-actions .btn-secondary {
+  flex: 1;
+}
+
+/* Margin grid */
+.margin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.margin-link-btn {
+  grid-row: 1 / 3;
+  grid-column: 3;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.margin-link-btn.active {
+  background: #2563eb22;
+  border-color: #2563eb;
+  color: #5b9cf6;
+}
+
+.margin-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+.margin-input {
+  width: 48px !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  text-align: right;
+}
+
+.margin-input:focus {
+  outline: none;
+  border: none !important;
 }
 
 /* ── Pages (Column 2) ── */

@@ -14,15 +14,13 @@ import { runPipeline, PipelineCancelledError } from './pipeline/runPipeline.js'
 import { exportPdf } from './pdf/exportPdf.js'
 
 const DEFAULT_STYLES = {
-  h1:        { fontSize: 128, lineHeight: 124 },
-  h2:        { fontSize: 96,  lineHeight: 96  },
-  h3:        { fontSize: 32,  lineHeight: 48  },
-  paragraph: { fontSize: 32,  lineHeight: 48  },
-  list:      { fontSize: 32,  lineHeight: 48  },
-  quote:     { fontSize: 32,  lineHeight: 48  },
-  code:      { fontSize: 28,  lineHeight: 44  },
-  spaceBefore: 16,
-  spaceAfter:  8,
+  h1:        { fontSize: 128, lineHeight: 124, spaceBefore: 96,  spaceAfter: 16 },
+  h2:        { fontSize: 96,  lineHeight: 96,  spaceBefore: 64,  spaceAfter: 12 },
+  h3:        { fontSize: 32,  lineHeight: 48,  spaceBefore: 40,  spaceAfter: 8  },
+  paragraph: { fontSize: 32,  lineHeight: 48,  spaceBefore: 0,   spaceAfter: 12 },
+  list:      { fontSize: 32,  lineHeight: 48,  spaceBefore: 0,   spaceAfter: 8  },
+  quote:     { fontSize: 32,  lineHeight: 48,  spaceBefore: 24,  spaceAfter: 24 },
+  code:      { fontSize: 28,  lineHeight: 44,  spaceBefore: 24,  spaceAfter: 24 },
 }
 
 const DEFAULT_MARGINS = {
@@ -43,16 +41,18 @@ function extractPageId(url) {
 
 export default function App() {
   const [notionUrl,         setNotionUrl]        = useLocalStorage('hemingway:notionUrl',        '')
-  const [styleSettings,     setStyleSettings]    = useLocalStorage('hemingway:styleSettings',    DEFAULT_STYLES)
+  const [styleSettings,     setStyleSettings]    = useLocalStorage('hemingway:styleSettings:v2',  DEFAULT_STYLES)
   const [marginSettings,    setMarginSettings]   = useLocalStorage('hemingway:marginSettings',   DEFAULT_MARGINS)
   const [validationIssues,  setValidationIssues] = useLocalStorage('hemingway:validationIssues', [])
   const [normalizedBlocks,  setNormalizedBlocks] = useLocalStorage('hemingway:normalizedBlocks', [])
   const [measuredBlocks,    setMeasuredBlocks]   = useLocalStorage('hemingway:measuredBlocks',   [])
   const [paginatedPages,    setPaginatedPages]   = useLocalStorage('hemingway:paginatedPages',   [])
-  const [resolvedStyles,    setResolvedStyles]   = useLocalStorage('hemingway:resolvedStyles',   null)
+  const [resolvedStyles,    setResolvedStyles]   = useLocalStorage('hemingway:resolvedStyles:v2', null)
   const [logs,              setLogs]             = useLocalStorage('hemingway:logs',             [])
   const [lastRunAt,         setLastRunAt]        = useLocalStorage('hemingway:lastRunAt',        null)
   const [isRunning,         setIsRunning]        = useState(false)
+  // True whenever styles/margins change after the last run — drives the Restyle button state
+  const [stylesDirty,       setStylesDirty]      = useState(false)
 
   const cancelTokenRef = useRef({ cancelled: false })
 
@@ -61,16 +61,19 @@ export default function App() {
       if (prop === null) return { ...prev, [key]: value }
       return { ...prev, [key]: { ...prev[key], [prop]: value } }
     })
+    setStylesDirty(true)
   }
 
   function handleMarginChange(key, value) {
     setMarginSettings(prev => ({ ...prev, [key]: value }))
+    setStylesDirty(true)
   }
 
   // Shared pipeline runner — handles cancel token, state wiring, error logging.
   // pipelineArgs are merged into the runPipeline call; clearBlocks controls whether
   // normalizedBlocks is reset (Compose) or kept (Restyle).
   function runWith({ clearBlocks, pipelineArgs }) {
+    setStylesDirty(false)
     cancelTokenRef.current.cancelled = true
     const token = { cancelled: false }
     cancelTokenRef.current = token
@@ -173,8 +176,15 @@ export default function App() {
         isRunning={isRunning}
         hasPages={paginatedPages.length > 0}
         hasBlocks={normalizedBlocks.length > 0}
+        stylesDirty={stylesDirty}
       />
-      <PagesPanel pages={paginatedPages} resolvedStyles={resolvedStyles} />
+      <PagesPanel
+        pages={paginatedPages}
+        resolvedStyles={resolvedStyles}
+        onDownloadPdf={handleDownloadPdf}
+        onClearOutput={handleClearOutput}
+        hasPages={paginatedPages.length > 0}
+      />
       <LogsPanel  logs={logs} />
     </div>
   )

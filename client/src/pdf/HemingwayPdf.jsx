@@ -42,16 +42,16 @@ function PdfRichText({ runs = [], style }) {
 }
 
 function PdfBlock({ block, resolvedStyles }) {
-  const { blocks: typeStyles, spaceBefore, spaceAfter } = resolvedStyles
-  const ts = typeStyles[block.type] ?? { fontSize: 16, lineHeight: 24 }
+  const { blocks: typeStyles } = resolvedStyles
+  const ts = typeStyles[block.type] ?? { fontSize: 16, lineHeight: 24, spaceBefore: 0, spaceAfter: 0 }
 
   const base = {
     fontFamily:   'Inter',
     fontWeight:   400,
     fontSize:     px(ts.fontSize),
     lineHeight:   ts.fontSize > 0 ? ts.lineHeight / ts.fontSize : 1.5,
-    marginTop:    block.isContinuation ? 0 : px(spaceBefore),
-    marginBottom: px(spaceAfter),
+    marginTop:    block.isContinuation ? 0 : px(ts.spaceBefore ?? 0),
+    marginBottom: px(ts.spaceAfter ?? 0),
   }
 
   switch (block.type) {
@@ -66,7 +66,7 @@ function PdfBlock({ block, resolvedStyles }) {
 
     case 'bulleted_list_item':
       return (
-        <View style={{ flexDirection: 'row', marginTop: px(spaceBefore), marginBottom: px(spaceAfter), paddingLeft: px(24) }}>
+        <View style={{ flexDirection: 'row', marginTop: px(ts.spaceBefore ?? 0), marginBottom: px(ts.spaceAfter ?? 0), paddingLeft: px(24) }}>
           <Text style={{ ...base, marginTop: 0, marginBottom: 0, marginRight: px(10) }}>•</Text>
           <PdfRichText runs={block.content} style={{ ...base, marginTop: 0, marginBottom: 0, flex: 1 }} />
         </View>
@@ -74,7 +74,7 @@ function PdfBlock({ block, resolvedStyles }) {
 
     case 'numbered_list_item':
       return (
-        <View style={{ flexDirection: 'row', marginTop: px(spaceBefore), marginBottom: px(spaceAfter), paddingLeft: px(24) }}>
+        <View style={{ flexDirection: 'row', marginTop: px(ts.spaceBefore ?? 0), marginBottom: px(ts.spaceAfter ?? 0), paddingLeft: px(24) }}>
           <Text style={{ ...base, marginTop: 0, marginBottom: 0, marginRight: px(10) }}>{block.index}.</Text>
           <PdfRichText runs={block.content} style={{ ...base, marginTop: 0, marginBottom: 0, flex: 1 }} />
         </View>
@@ -82,7 +82,7 @@ function PdfBlock({ block, resolvedStyles }) {
 
     case 'to_do':
       return (
-        <View style={{ flexDirection: 'row', marginTop: px(spaceBefore), marginBottom: px(spaceAfter), paddingLeft: px(24) }}>
+        <View style={{ flexDirection: 'row', marginTop: px(ts.spaceBefore ?? 0), marginBottom: px(ts.spaceAfter ?? 0), paddingLeft: px(24) }}>
           <Text style={{ ...base, marginTop: 0, marginBottom: 0, marginRight: px(10) }}>
             {block.checked ? '☑' : '☐'}
           </Text>
@@ -95,14 +95,14 @@ function PdfBlock({ block, resolvedStyles }) {
 
     case 'quote':
       return (
-        <View style={{ marginTop: px(spaceBefore), marginBottom: px(spaceAfter), paddingLeft: px(20), borderLeftWidth: 2, borderLeftColor: '#ccc', borderLeftStyle: 'solid' }}>
+        <View style={{ marginTop: px(ts.spaceBefore ?? 0), marginBottom: px(ts.spaceAfter ?? 0), paddingLeft: px(20), borderLeftWidth: 2, borderLeftColor: '#ccc', borderLeftStyle: 'solid' }}>
           <PdfRichText runs={block.content} style={{ ...base, marginTop: 0, marginBottom: 0, color: '#555' }} />
         </View>
       )
 
     case 'callout':
       return (
-        <View style={{ marginTop: px(spaceBefore), marginBottom: px(spaceAfter), padding: px(12), backgroundColor: '#f7f7f7', borderRadius: 4, flexDirection: 'row' }}>
+        <View style={{ marginTop: px(ts.spaceBefore ?? 0), marginBottom: px(ts.spaceAfter ?? 0), padding: px(12), backgroundColor: '#f7f7f7', borderRadius: 4, flexDirection: 'row' }}>
           {block.icon && <Text style={{ ...base, marginTop: 0, marginBottom: 0, marginRight: px(10) }}>{block.icon}</Text>}
           <PdfRichText runs={block.content} style={{ ...base, marginTop: 0, marginBottom: 0, flex: 1 }} />
         </View>
@@ -110,7 +110,7 @@ function PdfBlock({ block, resolvedStyles }) {
 
     case 'code':
       return (
-        <View style={{ marginTop: px(spaceBefore), marginBottom: px(spaceAfter), backgroundColor: '#f4f4f4', padding: px(16), borderRadius: 4 }}>
+        <View style={{ marginTop: px(ts.spaceBefore ?? 0), marginBottom: px(ts.spaceAfter ?? 0), backgroundColor: '#f4f4f4', padding: px(16), borderRadius: 4 }}>
           <Text style={{ ...base, marginTop: 0, marginBottom: 0, fontFamily: 'Courier' }}>
             {block.content.map(r => r.text).join('')}
           </Text>
@@ -119,12 +119,12 @@ function PdfBlock({ block, resolvedStyles }) {
 
     case 'divider':
       return (
-        <View style={{ marginTop: px(spaceBefore), marginBottom: px(spaceAfter), borderTopWidth: 0.5, borderTopColor: '#ddd', borderTopStyle: 'solid' }} />
+        <View style={{ marginTop: px(ts.spaceBefore ?? 0), marginBottom: px(ts.spaceAfter ?? 0), borderTopWidth: 0.5, borderTopColor: '#ddd', borderTopStyle: 'solid' }} />
       )
 
     case 'image':
       return block.url ? (
-        <View style={{ marginTop: px(spaceBefore), marginBottom: px(spaceAfter) }}>
+        <View style={{ marginTop: px(ts.spaceBefore ?? 0), marginBottom: px(ts.spaceAfter ?? 0) }}>
           <Image src={block.url} style={{ maxWidth: '100%' }} />
         </View>
       ) : null

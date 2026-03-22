@@ -16,15 +16,15 @@ function RichText({ runs = [] }) {
 }
 
 export default function BlockRenderer({ block, resolvedStyles }) {
-  const { spaceBefore, spaceAfter, blocks: typeStyles } = resolvedStyles
-  const ts = typeStyles[block.type] ?? { fontSize: 16, lineHeight: 24 }
+  const { blocks: typeStyles } = resolvedStyles
+  const ts = typeStyles[block.type] ?? { fontSize: 16, lineHeight: 24, spaceBefore: 0, spaceAfter: 0 }
 
   const base = {
     fontFamily:   "'Inter', sans-serif",
     fontSize:     ts.fontSize,
     lineHeight:   `${ts.lineHeight}px`,
-    marginTop:    block.isContinuation ? 0 : spaceBefore,
-    marginBottom: spaceAfter,
+    marginTop:    block.isContinuation ? 0 : (ts.spaceBefore ?? 0),
+    marginBottom: ts.spaceAfter ?? 0,
     wordBreak:    'break-word',
     width:        '100%',
     boxSizing:    'border-box',
@@ -123,7 +123,7 @@ export default function BlockRenderer({ block, resolvedStyles }) {
 
     case 'divider':
       return (
-        <div style={{ marginTop: spaceBefore, marginBottom: spaceAfter }}>
+        <div style={{ marginTop: ts.spaceBefore ?? 0, marginBottom: ts.spaceAfter ?? 0 }}>
           <hr style={{ border: 'none', borderTop: '1px solid #ddd' }} />
         </div>
       )

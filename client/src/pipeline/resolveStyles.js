@@ -21,14 +21,15 @@ export function resolveStyles(styleSettings, marginSettings, log) {
   const blocks = {}
 
   for (const [key, types] of Object.entries(STYLE_KEY_TO_TYPES)) {
-    const { fontSize, lineHeight } = styleSettings[key]
+    const { fontSize, lineHeight, spaceBefore, spaceAfter } = styleSettings[key]
     for (const type of types) {
-      blocks[type] = { fontSize, lineHeight }
+      blocks[type] = { fontSize, lineHeight, spaceBefore: spaceBefore ?? 0, spaceAfter: spaceAfter ?? 0 }
     }
   }
 
-  blocks.image   = { fontSize: 0, lineHeight: 0 }
-  blocks.divider = { fontSize: 0, lineHeight: 0 }
+  // image and divider get spaceBefore:0, spaceAfter:0
+  blocks.image   = { fontSize: 0, lineHeight: 0, spaceBefore: 0, spaceAfter: 0 }
+  blocks.divider = { fontSize: 0, lineHeight: 0, spaceBefore: 0, spaceAfter: 0 }
 
   const { top, bottom, left, right } = marginSettings
 
@@ -37,8 +38,6 @@ export function resolveStyles(styleSettings, marginSettings, log) {
 
   const resolved = {
     blocks,
-    spaceBefore:  styleSettings.spaceBefore,
-    spaceAfter:   styleSettings.spaceAfter,
     margins:      { top, bottom, left, right },
     pageWidth:    PAGE_RENDER_WIDTH,
     pageHeight:   PAGE_RENDER_HEIGHT,
