@@ -6,6 +6,7 @@ export interface RichTextRun {
   italic?: boolean
   code?: boolean
   strikethrough?: boolean
+  link?: string
 }
 
 export type BlockType =
@@ -21,8 +22,11 @@ export interface Block {
   content: RichTextRun[]
   index?: number      // numbered list
   checked?: boolean   // to_do
-  icon?: string | null // callout
-  url?: string | null  // image
+  icon?: string | null   // callout
+  url?: string | null    // image
+  language?: string      // code block
+  isCodeContinuation?: boolean  // code block split across pages
+  codeLineStart?: number        // 1-based starting line number for continuation chunks
 }
 
 export interface StyleAssignment {
@@ -45,6 +49,9 @@ export interface PluginSettings {
   styleMap: StyleMap
   margins: MarginSettings
   proxyUrl: string
+  newPageOnDivider: boolean
+  newPageOnH1: boolean
+  newPageOnH2: boolean
 }
 
 // Messages from UI → plugin
@@ -81,7 +88,7 @@ export const DEFAULT_STYLE_MAP: StyleMap = {
   divider:            { figmaStyleId: null, marginTop: 16, marginBottom: 16 },
 }
 
-export const DEFAULT_MARGINS: MarginSettings = { top: 72, bottom: 72, left: 72, right: 72 }
+export const DEFAULT_MARGINS: MarginSettings = { top: 60, bottom: 60, left: 40, right: 40 }
 
 export const PROXY_URL = 'https://hemingway-notion-proxy.reflow-app.workers.dev'
 

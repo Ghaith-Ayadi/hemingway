@@ -7,6 +7,12 @@ import {
   UiMessage, PluginMessage,
   A4_WIDTH, A4_HEIGHT,
 } from './types'
+import { tokenize } from './syntax'
+
+const CODE_PAD         = 16  // pt — top/bottom/right inner padding of code frame
+const LINE_NUM_COL     = 28  // pt — width of line number column
+const LINE_NUM_GAP     = 12  // pt — gap between line numbers and code text
+const LINE_NUM_RESERVED = LINE_NUM_COL + LINE_NUM_GAP  // 40pt total reserved on the left
 
 // ── Plugin entry ─────────────────────────────────────────────────────────────
 
@@ -15,7 +21,7 @@ figma.showUI(__html__, { width: 400, height: 600, themeColors: true })
 figma.ui.onmessage = async (msg: UiMessage) => {
   switch (msg.type) {
     case 'get-styles':
-      sendStyles()
+      await sendStyles()
       break
     case 'compose':
       await compose(msg.settings, false)
@@ -39,8 +45,8 @@ function log(message: string, level: 'info' | 'warn' | 'error' = 'info') {
 
 // ── Style discovery ───────────────────────────────────────────────────────────
 
-function sendStyles() {
-  const styles = figma.getLocalTextStyles().map(s => ({ id: s.id, name: s.name }))
+async function sendStyles() {
+  const styles = (await figma.getLocalTextStylesAsync()).map(s => ({ id: s.id, name: s.name }))
   send({ type: 'styles-list', styles })
 }
 
@@ -69,23 +75,33 @@ async function compose(settings: PluginSettings, isRepaginate: boolean) {
     // 3. Load fonts for all assigned styles
     await loadFontsForStyles(settings.styleMap)
 
-    // 4. Measure blocks
-    log('Measuring blocks…')
-    const measured = await measureBlocks(blocks, settings)
+    // 4. Split long code blocks into page-fitting line chunks
+    const contentHeight = A4_HEIGHT - settings.margins.top - settings.margins.bottom
+    const contentWidth  = A4_WIDTH  - settings.margins.left - settings.margins.right
+    const processedBlocks = await splitCodeBlocks(blocks, contentWidth, contentHeight, settings)
+    log(`${processedBlocks.length} blocks after code splitting`)
+
+    // 5. Measure blocks
+    log(`Measuring ${processedBlocks.length} blocks…`)
+    const measured = await measureBlocks(processedBlocks, settings)
+    const totalH = measured.reduce((s, m) => s + m.height, 0)
+    log(`Total content height: ${Math.round(totalH)}pt`)
 
     // 5. Paginate
     log('Paginating…')
-    const pages = paginate(measured, userElements, settings.margins)
-    log(`Created ${pages.length} page(s)`)
+    const pages = paginate(measured, userElements, settings.margins, settings.styleMap, settings.newPageOnDivider, settings.newPageOnH1, settings.newPageOnH2)
+    log(`Blocks per page: ${pages.map(p => p.items.length).join(', ')}`)
+    log(`${pages.length} page(s) — content height per page: ${A4_HEIGHT - settings.margins.top - settings.margins.bottom}pt`)
 
     // 6. Write to Figma
     log('Writing frames…')
-    await writePages(pages, blocks, settings)
+    await writePages(pages, settings)
 
     log(`Done — ${pages.length} page(s)`)
     send({ type: 'done', pageCount: pages.length })
   } catch (err: any) {
-    send({ type: 'error', message: err.message })
+    const msg = err?.message ?? String(err) ?? 'Unknown error'
+    send({ type: 'error', message: msg })
   }
 }
 
@@ -103,20 +119,106 @@ async function fetchBlocks(notionUrl: string, proxyUrl: string): Promise<Block[]
   return data.blocks
 }
 
+// ── Code block line splitting ─────────────────────────────────────────────────
+
+async function splitCodeBlocks(
+  blocks: Block[],
+  contentWidth: number,
+  contentHeight: number,
+  settings: PluginSettings
+): Promise<Block[]> {
+  const result: Block[] = []
+  const maxHeight = contentHeight - CODE_PAD * 2
+
+  // Pre-fetch the code text style once for all splits
+  const codeStyleId = settings.styleMap['code']?.figmaStyleId
+  const codeTextStyle = codeStyleId
+    ? await figma.getStyleByIdAsync(codeStyleId) as TextStyle | null
+    : null
+
+  for (const block of blocks) {
+    if (block.type !== 'code') { result.push(block); continue }
+
+    const lines = block.content.map(r => r.text).join('').split('\n')
+
+    // Measure the full block — if it fits, no split needed
+    const fullHeight = measureCodeChunkHeight(lines, contentWidth, codeTextStyle)
+    if (fullHeight <= contentHeight) { result.push(block); continue }
+
+    // Binary-search for the max number of source lines that fit per page.
+    // This accounts for wrapping: long lines occupy more than one visual row.
+    let remaining = lines
+    let chunkIndex = 0
+    let lineOffset = 0
+    while (remaining.length > 0) {
+      let lo = 1, hi = remaining.length, splitAt = 1
+      while (lo <= hi) {
+        const mid = Math.floor((lo + hi) / 2)
+        const h = measureCodeChunkHeight(remaining.slice(0, mid), contentWidth, codeTextStyle)
+        if (h <= maxHeight) { splitAt = mid; lo = mid + 1 }
+        else { hi = mid - 1 }
+      }
+
+      const chunk = remaining.slice(0, splitAt).join('\n')
+      result.push({
+        ...block,
+        id: `${block.id}__chunk__${chunkIndex}`,
+        content: [{ text: chunk }],
+        isCodeContinuation: chunkIndex > 0,
+        codeLineStart: lineOffset + 1,
+      })
+
+      lineOffset += splitAt
+      remaining = remaining.slice(splitAt)
+      chunkIndex++
+    }
+  }
+
+  return result
+}
+
+// Measure the rendered height of a set of code lines as a Figma text node.
+// Fonts and textStyle must already be resolved before calling this.
+function measureCodeChunkHeight(lines: string[], contentWidth: number, textStyle: TextStyle | null): number {
+  const node = figma.createText()
+  node.resize(contentWidth - CODE_PAD * 2 - LINE_NUM_RESERVED, 100)
+  node.textAutoResize = 'HEIGHT'
+
+  if (textStyle) {
+    node.textStyleId = textStyle.id
+  } else {
+    node.fontName = { family: 'Roboto Mono', style: 'Regular' }
+    node.fontSize = 11
+  }
+
+  node.characters = lines.join('\n') || ' '
+  const h = node.height + CODE_PAD * 2
+  node.remove()
+  return h
+}
+
 // ── Font loading ──────────────────────────────────────────────────────────────
 
 async function loadFontsForStyles(styleMap: StyleMap) {
   const styleIds = [...new Set(Object.values(styleMap).map(s => s.figmaStyleId).filter(Boolean))] as string[]
+  const fontNames: FontName[] = [
+    { family: 'Inter',       style: 'Regular' },
+    { family: 'Inter',       style: 'Bold'    },
+    { family: 'Inter',       style: 'Italic'  },
+    { family: 'Roboto Mono', style: 'Regular' },
+  ]
   for (const id of styleIds) {
-    const style = figma.getStyleById(id) as TextStyle | null
-    if (style) {
-      await figma.loadFontAsync(style.fontName)
-    }
+    const style = await figma.getStyleByIdAsync(id) as TextStyle | null
+    if (style) fontNames.push(style.fontName)
   }
-  // Always load a fallback font
-  await figma.loadFontAsync({ family: 'Inter', style: 'Regular' })
-  await figma.loadFontAsync({ family: 'Inter', style: 'Bold' })
-  await figma.loadFontAsync({ family: 'Inter', style: 'Italic' })
+  // Load all fonts in parallel, gracefully skip unavailable fonts
+  const uniqueFonts = [...new Set(fontNames.map(f => JSON.stringify(f)))].map(s => JSON.parse(s) as FontName)
+  const results = await Promise.allSettled(uniqueFonts.map(f => figma.loadFontAsync(f)))
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      log(`⚠ Font not available: ${uniqueFonts[i].family} ${uniqueFonts[i].style} — will fall back`, 'warn')
+    }
+  })
 }
 
 // ── Block measurement ─────────────────────────────────────────────────────────
@@ -126,35 +228,43 @@ interface MeasuredBlock {
   height: number  // pt
 }
 
+// Fonts must already be loaded before calling this (via loadFontsForStyles)
 async function measureBlocks(blocks: Block[], settings: PluginSettings): Promise<MeasuredBlock[]> {
   const contentWidth = A4_WIDTH - settings.margins.left - settings.margins.right
   const measured: MeasuredBlock[] = []
 
+  // Pre-fetch all unique text styles so the measurement loop stays synchronous
+  const styleIds = [...new Set(
+    Object.values(settings.styleMap).map(a => a.figmaStyleId).filter(Boolean) as string[]
+  )]
+  const styleCache = new Map<string, TextStyle | null>()
+  await Promise.all(styleIds.map(async id => {
+    styleCache.set(id, await figma.getStyleByIdAsync(id) as TextStyle | null)
+  }))
+
   for (const block of blocks) {
-    if (block.type === 'divider') {
-      measured.push({ block, height: 1 })
-      continue
-    }
-    if (block.type === 'image') {
-      // Fixed height placeholder for images (will be scaled on render)
-      measured.push({ block, height: 200 })
-      continue
-    }
+    if (block.type === 'divider') { measured.push({ block, height: 1 }); continue }
+    if (block.type === 'image')   { measured.push({ block, height: 200 }); continue }
 
     const styleAssignment = settings.styleMap[block.type]
     const textStyle = styleAssignment?.figmaStyleId
-      ? figma.getStyleById(styleAssignment.figmaStyleId) as TextStyle | null
+      ? styleCache.get(styleAssignment.figmaStyleId) ?? null
       : null
 
-    // Create a temporary text node to measure
+    const isCode   = block.type === 'code'
+    const padWidth = isCode ? CODE_PAD * 2 + LINE_NUM_RESERVED : 0
+    const indent   = isCode ? 0 : getIndent(block.type)
+
     const node = figma.createText()
-    node.resize(contentWidth - getIndent(block.type), 100)
+    node.resize(contentWidth - padWidth - indent, 100)
+    node.textAutoResize = 'HEIGHT'
 
     if (textStyle) {
-      await figma.loadFontAsync(textStyle.fontName)
       node.textStyleId = textStyle.id
+    } else if (isCode) {
+      node.fontName = { family: 'Roboto Mono', style: 'Regular' }
+      node.fontSize = 11
     } else {
-      await figma.loadFontAsync({ family: 'Inter', style: 'Regular' })
       node.fontName = { family: 'Inter', style: 'Regular' }
       node.fontSize = getDefaultFontSize(block.type)
       node.lineHeight = { unit: 'PERCENT', value: 140 }
@@ -162,16 +272,20 @@ async function measureBlocks(blocks: Block[], settings: PluginSettings): Promise
 
     const text = block.content.map(r => r.text).join('')
     node.characters = text || ' '
-    node.textAutoResize = 'HEIGHT'
 
-    const height = node.height
+    const height = node.height + (isCode ? CODE_PAD * 2 : 0)
     node.remove()
 
     measured.push({ block, height })
+
+    if (measured.length % 50 === 0) {
+      send({ type: 'log', level: 'info', message: `  measured ${measured.length}/${blocks.length}…` })
+    }
   }
 
   return measured
 }
+
 
 function getIndent(type: BlockType): number {
   if (['bulleted_list_item', 'numbered_list_item', 'to_do'].includes(type)) return 20
@@ -260,13 +374,16 @@ interface PageItem {
 function paginate(
   measured: MeasuredBlock[],
   userElements: UserElement[],
-  margins: MarginSettings
+  margins: MarginSettings,
+  styleMap: StyleMap,
+  newPageOnDivider: boolean,
+  newPageOnH1: boolean,
+  newPageOnH2: boolean,
 ): PageContent[] {
   const contentHeight = A4_HEIGHT - margins.top - margins.bottom
   const pages: PageContent[] = [{ items: [] }]
   let currentY = 0
 
-  // Build a map: blockId → user elements that come after it
   const userAfterMap = new Map<string, UserElement[]>()
   for (const ue of userElements) {
     if (!userAfterMap.has(ue.afterBlockId)) userAfterMap.set(ue.afterBlockId, [])
@@ -285,11 +402,39 @@ function paginate(
     currentY += totalH
   }
 
-  for (const { block, height } of measured) {
-    const style = { marginTop: 0, marginBottom: 0 }  // will be read from styleMap in writePages
-    addItem({ block, height, marginTop: 0, marginBottom: 0 })
+  const LIST_TYPES = new Set<string>(['bulleted_list_item', 'numbered_list_item', 'to_do'])
 
-    // Insert user elements that follow this block
+  for (let i = 0; i < measured.length; i++) {
+    const { block, height } = measured[i]
+
+    // Page-break triggers — force a new page before this block (heading stays on new page)
+    const forceBreak =
+      (block.type === 'divider'   && newPageOnDivider) ||
+      (block.type === 'heading_1' && newPageOnH1) ||
+      (block.type === 'heading_2' && newPageOnH2)
+    if (forceBreak) {
+      if (currentPage().items.length > 0) { pages.push({ items: [] }); currentY = 0 }
+      if (block.type === 'divider') continue  // divider itself not rendered
+    }
+
+    const assignment = styleMap[block.type]
+    let marginTop    = assignment?.marginTop    ?? 0
+    let marginBottom = assignment?.marginBottom ?? 0
+
+    if (LIST_TYPES.has(block.type)) {
+      const prevBlock = i > 0 ? measured[i - 1].block : null
+      const nextBlock = measured[i + 1]?.block
+      const isFirst   = !prevBlock || !LIST_TYPES.has(prevBlock.type)
+      const isLast    = !nextBlock  || !LIST_TYPES.has(nextBlock.type)
+
+      // Pull the first item closer to the preceding paragraph
+      if (isFirst && prevBlock) marginTop = -6
+      // Tight between items, generous gap after the group
+      marginBottom = isLast ? 16 : 2
+    }
+
+    addItem({ block, height, marginTop, marginBottom })
+
     const ues = userAfterMap.get(block.id) ?? []
     for (const ue of ues) {
       addItem({ userElement: ue, height: ue.height, marginTop: 0, marginBottom: 0 })
@@ -301,7 +446,7 @@ function paginate(
 
 // ── Figma frame writing ───────────────────────────────────────────────────────
 
-async function writePages(pages: PageContent[], allBlocks: Block[], settings: PluginSettings) {
+async function writePages(pages: PageContent[], settings: PluginSettings) {
   // Remove old generated pages
   const existing = getExistingHwPages()
   for (const p of existing) p.remove()
@@ -338,17 +483,18 @@ async function writePages(pages: PageContent[], allBlocks: Block[], settings: Pl
 
       const block = item.block!
       const assignment = settings.styleMap[block.type]
-      y += assignment.marginTop
+      y += item.marginTop
 
-      const node = await renderBlockNode(block, assignment, contentWidth, settings)
+      const node = await renderBlockNode(block, assignment, contentWidth)
       if (node) {
         node.x = left
         node.y = y
         pageFrame.appendChild(node)
-        y += node.height
+        // Use pre-measured height to stay in sync with paginator
+        y += item.height
       }
 
-      y += assignment.marginBottom
+      y += item.marginBottom
     }
 
     figma.currentPage.appendChild(pageFrame)
@@ -363,7 +509,6 @@ async function renderBlockNode(
   block: Block,
   assignment: { figmaStyleId: string | null; marginTop: number; marginBottom: number },
   contentWidth: number,
-  settings: PluginSettings
 ): Promise<SceneNode | null> {
 
   if (block.type === 'divider') {
@@ -376,7 +521,6 @@ async function renderBlockNode(
   }
 
   if (block.type === 'image') {
-    // Placeholder rectangle — user replaces with actual image
     const rect = figma.createRectangle()
     rect.resize(contentWidth, 200)
     rect.fills = [{ type: 'SOLID', color: { r: 0.95, g: 0.95, b: 0.95 } }]
@@ -385,9 +529,14 @@ async function renderBlockNode(
     return rect
   }
 
-  // Text node
+  if (block.type === 'code') {
+    return renderCodeBlock(block, assignment, contentWidth)
+  }
+
+  // ── Text node ─────────────────────────────────────────────────────────────
+
   const textStyle = assignment.figmaStyleId
-    ? figma.getStyleById(assignment.figmaStyleId) as TextStyle | null
+    ? await figma.getStyleByIdAsync(assignment.figmaStyleId) as TextStyle | null
     : null
 
   const indent = getIndent(block.type)
@@ -406,25 +555,36 @@ async function renderBlockNode(
     textNode.fontSize = getDefaultFontSize(block.type)
   }
 
-  // Set text with rich text formatting
   const fullText = block.content.map(r => r.text).join('')
   textNode.characters = fullText || ' '
 
-  // Apply per-run formatting
+  // Apply per-run formatting (bold, italic, links)
   let charOffset = 0
   for (const run of block.content) {
     const len = run.text.length
     if (len === 0) continue
-    if (run.bold) {
-      const boldFont = { family: textStyle?.fontName.family ?? 'Inter', style: 'Bold' }
-      await figma.loadFontAsync(boldFont)
-      textNode.setRangeFontName(charOffset, charOffset + len, boldFont)
-      // fontWeight is set via fontName (Bold style), not setRangeFontWeight
+    const family = textStyle?.fontName.family ?? 'Inter'
+    if (run.bold || run.italic) {
+      // Try the most specific variant first, fall back gracefully
+      const variants = run.bold && run.italic
+        ? ['Bold Italic', 'Bold', 'Italic', 'Regular']
+        : run.bold
+          ? ['Bold', 'Semibold', 'Medium', 'Regular']
+          : ['Italic', 'Regular']
+      let loaded: FontName | null = null
+      for (const style of variants) {
+        try {
+          const f: FontName = { family, style }
+          await figma.loadFontAsync(f)
+          loaded = f
+          break
+        } catch { /* variant unavailable, try next */ }
+      }
+      if (loaded) textNode.setRangeFontName(charOffset, charOffset + len, loaded)
     }
-    if (run.italic) {
-      const italicFont = { family: textStyle?.fontName.family ?? 'Inter', style: 'Italic' }
-      await figma.loadFontAsync(italicFont)
-      textNode.setRangeFontName(charOffset, charOffset + len, italicFont)
+    if (run.link) {
+      textNode.setRangeHyperlink(charOffset, charOffset + len, { type: 'URL', value: run.link })
+      textNode.setRangeFills(charOffset, charOffset + len, [{ type: 'SOLID', color: { r: 0.1, g: 0.37, b: 0.84 } }])
     }
     charOffset += len
   }
@@ -458,6 +618,86 @@ async function renderBlockNode(
   }
 
   return textNode
+}
+
+async function renderCodeBlock(
+  block: Block,
+  assignment: { figmaStyleId: string | null; marginTop: number; marginBottom: number },
+  contentWidth: number,
+): Promise<FrameNode> {
+  const textStyle = assignment.figmaStyleId
+    ? await figma.getStyleByIdAsync(assignment.figmaStyleId) as TextStyle | null
+    : null
+
+  const codeFont: FontName = textStyle?.fontName ?? { family: 'Roboto Mono', style: 'Regular' }
+  await figma.loadFontAsync(codeFont)
+
+  const GH_BG       = { r: 0.965, g: 0.973, b: 0.980 }  // #f6f8fa
+  const GH_TEXT     = { r: 0.141, g: 0.161, b: 0.184 }  // #24292f
+  const GH_LINENUM  = { r: 0.549, g: 0.584, b: 0.624 }  // #8c959f
+
+  const code      = block.content.map(r => r.text).join('')
+  const lines     = code.split('\n')
+  const lineStart = block.codeLineStart ?? 1
+  const lineEnd   = lineStart + lines.length - 1
+  const digits    = Math.max(2, String(lineEnd).length)
+
+  // ── Code text node ────────────────────────────────────────────────────────
+  const codeX = CODE_PAD + LINE_NUM_RESERVED
+  const textNode = figma.createText()
+  textNode.resize(contentWidth - codeX - CODE_PAD, 100)
+  textNode.textAutoResize = 'HEIGHT'
+
+  if (textStyle) {
+    textNode.textStyleId = textStyle.id
+  } else {
+    textNode.fontName = codeFont
+    textNode.fontSize = 11
+  }
+
+  textNode.characters = code || ' '
+  textNode.fills = [{ type: 'SOLID', color: GH_TEXT }]
+
+  const language = block.language ?? 'plain'
+  const colorRanges = tokenize(code, language)
+  for (const { start, end, color } of colorRanges) {
+    if (start < end && end <= code.length) {
+      textNode.setRangeFills(start, end, [{ type: 'SOLID', color }])
+    }
+  }
+
+  // ── Line numbers node (separate layer → copy-paste of code excludes them) ─
+  const lineNumNode = figma.createText()
+  lineNumNode.resize(LINE_NUM_COL, 100)
+  lineNumNode.textAutoResize = 'HEIGHT'
+  lineNumNode.textAlignHorizontal = 'RIGHT'
+  if (textStyle) {
+    lineNumNode.textStyleId = textStyle.id
+  } else {
+    lineNumNode.fontName = codeFont
+    lineNumNode.fontSize = 11
+  }
+  lineNumNode.characters = lines.map((_, i) => String(lineStart + i).padStart(digits, '0')).join('\n')
+  lineNumNode.fills = [{ type: 'SOLID', color: GH_LINENUM }]
+
+  // ── Wrap in frame with GitHub light background ─────────────────────────────
+  const frameH = textNode.height + CODE_PAD * 2
+  const frame = figma.createFrame()
+  frame.resize(contentWidth, frameH)
+  frame.fills = [{ type: 'SOLID', color: GH_BG }]
+  frame.cornerRadius = block.isCodeContinuation ? 0 : 4
+  frame.layoutMode = 'NONE'
+  frame.clipsContent = false
+
+  lineNumNode.x = CODE_PAD
+  lineNumNode.y = CODE_PAD
+  textNode.x = codeX
+  textNode.y = CODE_PAD
+  frame.appendChild(lineNumNode)
+  frame.appendChild(textNode)
+
+  tagNode(frame, block)
+  return frame
 }
 
 function tagNode(node: SceneNode, block: Block) {

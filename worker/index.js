@@ -123,6 +123,7 @@ function normalizeBlocks(allBlocks, pageId) {
     if (type === 'to_do') block.checked = v.properties?.checked?.[0]?.[0] === 'Yes'
     if (type === 'callout') block.icon = v.format?.page_icon ?? null
     if (type === 'image') block.url = v.properties?.source?.[0]?.[0] ?? null
+    if (type === 'code') block.language = v.properties?.language?.[0]?.[0]?.toLowerCase() ?? 'plain'
 
     blocks.push(block)
   }
@@ -136,11 +137,13 @@ function parseRichText(segments) {
     const text = seg[0] ?? ''
     const annotations = seg[1] ?? []
     const run = { text }
-    for (const [type] of annotations) {
+    for (const ann of annotations) {
+      const [type, value] = ann
       if (type === 'b') run.bold = true
       if (type === 'i') run.italic = true
       if (type === 'c') run.code = true
       if (type === 's') run.strikethrough = true
+      if (type === 'a') run.link = value   // hyperlink
     }
     return run
   })

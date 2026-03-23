@@ -2,11 +2,12 @@
   "name": "hemingway-plugin",
   "version": "1.0.0",
   "scripts": {
-    "build": "npx webpack --mode production",
+    "build": "npx webpack --mode production && node patch-bundle.js",
     "watch": "npx webpack --mode development --watch"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.95.0",
+    "@types/prismjs": "^1.26.6",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "css-loader": "^6.0.0",
@@ -18,6 +19,7 @@
     "webpack-cli": "^5.0.0"
   },
   "dependencies": {
+    "prismjs": "^1.30.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   }

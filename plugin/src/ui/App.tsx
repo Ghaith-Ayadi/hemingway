@@ -33,6 +33,9 @@ export default function App() {
   const [styleMap, setStyleMap]     = useState<StyleMap>(DEFAULT_STYLE_MAP)
   const [margins, setMargins]       = useState<MarginSettings>(DEFAULT_MARGINS)
   const [figmaStyles, setFigmaStyles] = useState<FigmaStyle[]>([])
+  const [newPageOnH1, setNewPageOnH1]           = useState(false)
+  const [newPageOnH2, setNewPageOnH2]           = useState(false)
+  const [newPageOnDivider, setNewPageOnDivider] = useState(false)
   const [logs, setLogs]             = useState<LogEntry[]>([])
   const [running, setRunning]       = useState(false)
   const [tab, setTab]               = useState<'styles' | 'margins' | 'logs'>('styles')
@@ -76,7 +79,7 @@ export default function App() {
   }
 
   function buildSettings(): PluginSettings {
-    return { notionUrl, styleMap, margins, proxyUrl }
+    return { notionUrl, styleMap, margins, proxyUrl, newPageOnDivider, newPageOnH1, newPageOnH2 }
   }
 
   function handleCompose() {

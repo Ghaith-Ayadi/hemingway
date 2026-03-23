@@ -3,9 +3,9 @@
   "id": "hemingway-plugin",
   "api": "1.0.0",
   "main": "dist/code.js",
-  "ui": "dist/ui.html",
+  "ui": "src/ui/ui.html",
   "editorType": ["figma"],
   "networkAccess": {
-    "allowedDomains": ["https://hemingway-notion-proxy.workers.dev", "https://www.notion.so"]
+    "allowedDomains": ["https://hemingway-notion-proxy.reflow-app.workers.dev", "https://www.notion.so"]
   }
 }
