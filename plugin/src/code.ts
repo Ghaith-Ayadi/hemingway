@@ -464,6 +464,7 @@ async function writePages(pages: PageContent[], settings: PluginSettings) {
     pageFrame.setPluginData('hw-type', 'page')
     pageFrame.setPluginData('hw-page-index', String(pi))
     pageFrame.layoutMode = 'NONE'
+    pageFrame.clipsContent = true
 
     let y = settings.margins.top
     const { left, right } = settings.margins
@@ -610,6 +611,7 @@ async function renderBlockNode(
       block.type === 'numbered_list_item' ? `${block.index}.` :
       block.checked ? '☑' : '☐'
 
+    textNode.layoutGrow = 1  // fill remaining width in horizontal auto-layout
     wrapper.appendChild(bulletNode)
     wrapper.appendChild(textNode)
     wrapper.setPluginData('hw-type', 'block')
@@ -687,7 +689,6 @@ async function renderCodeBlock(
   frame.fills = [{ type: 'SOLID', color: GH_BG }]
   frame.cornerRadius = block.isCodeContinuation ? 0 : 4
   frame.layoutMode = 'NONE'
-  frame.clipsContent = false
 
   lineNumNode.x = CODE_PAD
   lineNumNode.y = CODE_PAD
