@@ -83,7 +83,7 @@ export const DEFAULT_STYLE_MAP: StyleMap = {
 
 export const DEFAULT_MARGINS: MarginSettings = { top: 72, bottom: 72, left: 72, right: 72 }
 
-export const PROXY_URL = 'https://hemingway-notion-proxy.workers.dev'
+export const PROXY_URL = 'https://hemingway-notion-proxy.reflow-app.workers.dev'
 
 export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   heading_1: 'Heading 1',
