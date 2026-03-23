@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Hemingway</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 11px;
+  color: var(--figma-color-text, #111);
+  background: var(--figma-color-bg, #fff);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+.section {
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--figma-color-border, #e5e5e5);
+}
+input[type=text], input[type=number] {
+  background: var(--figma-color-bg, #fff);
+  color: var(--figma-color-text, #111);
+  border: 1px solid var(--figma-color-border, #e5e5e5);
+  border-radius: 3px;
+  outline: none;
+  font-size: 11px;
+}
+input[type=text]:focus, input[type=number]:focus {
+  border-color: var(--figma-color-border-selected, #18a0fb);
+}
+#url-input {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+#url-input::placeholder { color: var(--figma-color-text-tertiary, #999); }
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--figma-color-border, #e5e5e5);
+  flex-shrink: 0;
+}
+.tab {
+  flex: 1; padding: 8px 0; font-size: 11px;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  cursor: pointer; color: var(--figma-color-text-secondary, #666); font-weight: 500;
+}
+.tab.active {
+  color: var(--figma-color-text, #111);
+  border-bottom-color: var(--figma-color-border-selected, #18a0fb);
+}
+.tab-panel { display: none; flex: 1; overflow-y: auto; }
+.tab-panel.active { display: flex; flex-direction: column; }
+/* Styles table */
+.table-head {
+  display: grid; grid-template-columns: 1fr 1fr 36px 36px;
+  gap: 4px; padding: 6px 12px 4px;
+  font-size: 10px; color: var(--figma-color-text-tertiary, #999);
+  font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+  border-bottom: 1px solid var(--figma-color-border, #e5e5e5);
+  flex-shrink: 0;
+}
+.style-row {
+  display: grid; grid-template-columns: 1fr 1fr 36px 36px;
+  gap: 4px; padding: 4px 12px; align-items: center;
+  border-bottom: 1px solid var(--figma-color-border, #e5e5e5);
+}
+.style-row span { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.style-row select {
+  font-size: 10px; padding: 3px 4px;
+  border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 3px;
+  background: var(--figma-color-bg, #fff); color: var(--figma-color-text, #111);
+  width: 100%; outline: none;
+}
+.style-row input[type=number] { width: 36px; padding: 3px 4px; text-align: right; }
+/* Margins */
+#margins-panel { padding: 12px; gap: 10px; }
+.margin-row { display: flex; align-items: center; gap: 8px; }
+.margin-row label { width: 52px; color: var(--figma-color-text-secondary, #666); }
+.margin-row input { width: 64px; padding: 4px 6px; text-align: right; }
+.margin-row span { font-size: 10px; color: var(--figma-color-text-tertiary, #999); }
+hr { border: none; border-top: 1px solid var(--figma-color-border, #e5e5e5); margin: 4px 0; }
+/* Logs */
+#logs-panel { padding: 8px 12px; gap: 3px; font-family: 'Menlo', monospace; font-size: 10px; }
+.log-warn { color: #f59e0b; }
+.log-error { color: #ef4444; }
+.logs-empty { color: var(--figma-color-text-tertiary, #999); text-align: center; margin-top: 24px; font-family: 'Inter', sans-serif; }
+/* Actions */
+.actions {
+  display: flex; gap: 8px; padding: 10px 12px;
+  border-top: 1px solid var(--figma-color-border, #e5e5e5); flex-shrink: 0;
+}
+.btn-primary {
+  flex: 1; padding: 8px; background: var(--figma-color-bg-brand, #18a0fb);
+  color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.btn-primary:disabled { opacity: 0.5; cursor: default; }
+.btn-secondary {
+  flex: 1; padding: 8px; background: transparent;
+  color: var(--figma-color-text, #111);
+  border: 1px solid var(--figma-color-border, #e5e5e5);
+  border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer;
+}
+.btn-secondary:disabled { opacity: 0.5; cursor: default; }
+</style>
+</head>
+<body>
+
+<div class="section">
+  <input id="url-input" type="text" placeholder="Notion page URL (must be public)" />
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="styles">Styles</button>
+  <button class="tab" data-tab="margins">Margins</button>
+  <button class="tab" data-tab="logs">Logs</button>
+</div>
+
+<!-- Styles tab -->
+<div id="styles-panel" class="tab-panel active">
+  <div class="table-head">
+    <span>Block type</span><span>Figma style</span><span>↑</span><span>↓</span>
+  </div>
+  <div id="styles-rows"></div>
+  <div style="padding:6px 12px 8px;border-top:1px solid var(--figma-color-border,#e5e5e5);display:flex;flex-direction:column;gap:5px">
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer"><input type="checkbox" id="new-page-on-h1" /> New page on H1</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer"><input type="checkbox" id="new-page-on-h2" /> New page on H2</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer"><input type="checkbox" id="new-page-on-divider" /> New page on Divider</label>
+  </div>
+</div>
+
+<!-- Margins tab -->
+<div id="margins-panel" class="tab-panel">
+  <div class="margin-row"><label>Top</label><input type="number" id="m-top" value="60" /><span>pt</span></div>
+  <div class="margin-row"><label>Bottom</label><input type="number" id="m-bottom" value="60" /><span>pt</span></div>
+  <div class="margin-row"><label>Left</label><input type="number" id="m-left" value="40" /><span>pt</span></div>
+  <div class="margin-row"><label>Right</label><input type="number" id="m-right" value="40" /><span>pt</span></div>
+  <hr />
+  <div class="margin-row" style="flex-wrap:wrap;gap:4px">
+    <label style="width:100%;font-size:10px;color:var(--figma-color-text-tertiary,#999)">Proxy URL</label>
+    <input type="text" id="proxy-url" style="flex:1;font-size:10px;padding:4px 6px" />
+  </div>
+</div>
+
+<!-- Logs tab -->
+<div id="logs-panel" class="tab-panel">
+  <div class="logs-empty" id="logs-empty">No logs yet</div>
+</div>
+
+<div class="actions">
+  <button class="btn-primary" id="btn-compose">Compose</button>
+  <button class="btn-secondary" id="btn-repaginate">Re-paginate</button>
+</div>
+
+<script>
+(function () {
+  var BLOCK_TYPES = [
+    ['heading_1','Heading 1'],['heading_2','Heading 2'],['heading_3','Heading 3'],
+    ['paragraph','Paragraph'],['bulleted_list_item','Bulleted List'],
+    ['numbered_list_item','Numbered List'],['to_do','To-Do'],
+    ['quote','Quote'],['callout','Callout'],['code','Code'],['divider','Divider']
+  ]
+
+  var DEFAULT_MARGINS = { top:60, bottom:60, left:40, right:40 }
+  var PROXY_URL = 'https://hemingway-notion-proxy.reflow-app.workers.dev'
+
+  // State
+  var figmaStyles = []
+  var running = false
+
+  // Init proxy URL
+  document.getElementById('proxy-url').value = PROXY_URL
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+
+  document.querySelectorAll('.tab').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.tab').forEach(function(b){ b.classList.remove('active') })
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active') })
+      btn.classList.add('active')
+      document.getElementById(btn.dataset.tab + '-panel').classList.add('active')
+    })
+  })
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(function(b){ b.classList.remove('active') })
+    document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active') })
+    document.querySelector('[data-tab="'+name+'"]').classList.add('active')
+    document.getElementById(name+'-panel').classList.add('active')
+  }
+
+  // ── Style rows ────────────────────────────────────────────────────────────
+
+  var DEFAULT_MARGINS_TOP    = {heading_1:48,heading_2:32,heading_3:24,paragraph:0,bulleted_list_item:0,numbered_list_item:0,to_do:0,quote:12,callout:12,code:12,divider:16}
+  var DEFAULT_MARGINS_BOTTOM = {heading_1:24,heading_2:16,heading_3:12,paragraph:12,bulleted_list_item:6,numbered_list_item:6,to_do:6,quote:12,callout:12,code:12,divider:16}
+
+  function buildStyleRows() {
+    var container = document.getElementById('styles-rows')
+    container.innerHTML = ''
+    BLOCK_TYPES.forEach(function(pair) {
+      var key = pair[0], label = pair[1]
+      var row = document.createElement('div')
+      row.className = 'style-row'
+      row.dataset.key = key
+
+      var span = document.createElement('span')
+      span.textContent = label
+
+      var sel = document.createElement('select')
+      sel.className = 'style-sel'
+      var opt0 = document.createElement('option')
+      opt0.value = ''
+      opt0.textContent = '— none —'
+      sel.appendChild(opt0)
+      figmaStyles.forEach(function(s) {
+        var opt = document.createElement('option')
+        opt.value = s.id
+        opt.textContent = s.name
+        sel.appendChild(opt)
+      })
+
+      var inTop = document.createElement('input')
+      inTop.type = 'number'
+      inTop.className = 'mt-input'
+      inTop.value = DEFAULT_MARGINS_TOP[key] || 0
+
+      var inBot = document.createElement('input')
+      inBot.type = 'number'
+      inBot.className = 'mb-input'
+      inBot.value = DEFAULT_MARGINS_BOTTOM[key] || 0
+
+      row.appendChild(span)
+      row.appendChild(sel)
+      row.appendChild(inTop)
+      row.appendChild(inBot)
+      container.appendChild(row)
+    })
+  }
+
+  buildStyleRows()
+
+  // ── Styles list from plugin ───────────────────────────────────────────────
+
+  function refreshSelects() {
+    document.querySelectorAll('.style-sel').forEach(function(sel) {
+      var current = sel.value
+      while (sel.options.length > 0) sel.remove(0)
+      var opt0 = document.createElement('option')
+      opt0.value = ''; opt0.textContent = '— none —'
+      sel.appendChild(opt0)
+      figmaStyles.forEach(function(s) {
+        var opt = document.createElement('option')
+        opt.value = s.id; opt.textContent = s.name
+        sel.appendChild(opt)
+      })
+      sel.value = current
+    })
+  }
+
+  // ── Auto-match styles ─────────────────────────────────────────────────────
+  // Normalize a style name: lowercase, replace /−_ with spaces, collapse whitespace.
+  // Then for each block type, try aliases in priority order. A match is a substring
+  // hit on the normalized name. Among multiple hits for the same alias, prefer the
+  // style with the fewest tokens (shortest / most specific name).
+  // Unmatched blocks below paragraph fall back to whatever paragraph matched.
+
+  var ALIASES = {
+    heading_1:          ['h1', 'heading 1', 'title'],
+    heading_2:          ['h2', 'heading 2', 'subtitle'],
+    heading_3:          ['h3', 'heading 3', 'subheading'],
+    paragraph:          ['body', 'paragraph', 'text'],
+    bulleted_list_item: ['list', 'bullet', 'body', 'text'],
+    numbered_list_item: ['list', 'numbered', 'body', 'text'],
+    to_do:              ['todo', 'task', 'body', 'text'],
+    quote:              ['quote', 'body', 'text'],
+    callout:            ['callout', 'caption', 'note', 'body', 'text'],
+    code:               ['code', 'mono'],
+  }
+
+  var BELOW_PARAGRAPH = [
+    'bulleted_list_item', 'numbered_list_item', 'to_do',
+    'quote', 'callout', 'code', 'divider'
+  ]
+
+  function norm(name) {
+    return name.toLowerCase().replace(/[\/\-_]/g, ' ').replace(/\s+/g, ' ').trim()
+  }
+
+  function matchStyle(key) {
+    var aliases = ALIASES[key]
+    if (!aliases) return null
+    for (var ai = 0; ai < aliases.length; ai++) {
+      var alias = aliases[ai]
+      var hits = figmaStyles.filter(function(s) { return norm(s.name).indexOf(alias) !== -1 })
+      if (hits.length === 0) continue
+      // Prefer fewest tokens (most specific name)
+      hits.sort(function(a, b) { return norm(a.name).split(' ').length - norm(b.name).split(' ').length })
+      return hits[0].id
+    }
+    return null
+  }
+
+  function autoMatch() {
+    var matched = {}
+    BLOCK_TYPES.forEach(function(pair) { matched[pair[0]] = matchStyle(pair[0]) })
+
+    var paragraphId = matched['paragraph']
+
+    BLOCK_TYPES.forEach(function(pair) {
+      var key = pair[0]
+      var id = matched[key]
+      // Unmatched blocks below paragraph inherit paragraph's match
+      if (!id && BELOW_PARAGRAPH.indexOf(key) !== -1) id = paragraphId
+      if (!id) return
+      var sel = document.querySelector('.style-row[data-key="' + key + '"] .style-sel')
+      if (sel) sel.value = id
+    })
+  }
+
+  // ── Build settings ────────────────────────────────────────────────────────
+
+  function buildSettings() {
+    var styleMap = {}
+    BLOCK_TYPES.forEach(function(pair) {
+      var key = pair[0]
+      var row = document.querySelector('.style-row[data-key="'+key+'"]')
+      styleMap[key] = {
+        figmaStyleId: row.querySelector('.style-sel').value || null,
+        marginTop:    Number(row.querySelector('.mt-input').value),
+        marginBottom: Number(row.querySelector('.mb-input').value)
+      }
+    })
+    return {
+      notionUrl:        document.getElementById('url-input').value.trim(),
+      proxyUrl:         document.getElementById('proxy-url').value.trim(),
+      newPageOnH1:      document.getElementById('new-page-on-h1').checked,
+      newPageOnH2:      document.getElementById('new-page-on-h2').checked,
+      newPageOnDivider: document.getElementById('new-page-on-divider').checked,
+      styleMap:         styleMap,
+      margins: {
+        top:    Number(document.getElementById('m-top').value),
+        bottom: Number(document.getElementById('m-bottom').value),
+        left:   Number(document.getElementById('m-left').value),
+        right:  Number(document.getElementById('m-right').value)
+      }
+    }
+  }
+
+  // ── Logs ──────────────────────────────────────────────────────────────────
+
+  function addLog(level, message) {
+    var panel = document.getElementById('logs-panel')
+    var empty = document.getElementById('logs-empty')
+    if (empty) empty.remove()
+    var div = document.createElement('div')
+    div.className = level !== 'info' ? 'log-' + level : ''
+    div.textContent = message
+    panel.appendChild(div)
+    panel.scrollTop = panel.scrollHeight
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+
+  function setRunning(val) {
+    running = val
+    document.getElementById('btn-compose').disabled = val
+    document.getElementById('btn-repaginate').disabled = val
+    document.getElementById('btn-compose').textContent = val ? 'Running…' : 'Compose'
+  }
+
+  document.getElementById('btn-compose').addEventListener('click', function() {
+    var s = buildSettings()
+    if (!s.notionUrl) { addLog('error', 'Paste a Notion URL first'); switchTab('logs'); return }
+    document.getElementById('logs-panel').innerHTML = ''
+    setRunning(true)
+    switchTab('logs')
+    parent.postMessage({ pluginMessage: { type: 'compose', settings: s } }, '*')
+  })
+
+  document.getElementById('btn-repaginate').addEventListener('click', function() {
+    document.getElementById('logs-panel').innerHTML = ''
+    setRunning(true)
+    switchTab('logs')
+    parent.postMessage({ pluginMessage: { type: 'repaginate', settings: buildSettings() } }, '*')
+  })
+
+  // ── Messages from plugin ──────────────────────────────────────────────────
+
+  window.addEventListener('message', function(event) {
+    var msg = event.data.pluginMessage
+    if (!msg) return
+    if (msg.type === 'styles-list') {
+      var firstLoad = figmaStyles.length === 0
+      figmaStyles = msg.styles
+      refreshSelects()
+      if (firstLoad) autoMatch()
+    } else if (msg.type === 'log') {
+      addLog(msg.level, msg.message)
+    } else if (msg.type === 'done') {
+      addLog('info', '✓ ' + msg.pageCount + ' page(s) generated')
+      setRunning(false)
+    } else if (msg.type === 'error') {
+      addLog('error', msg.message)
+      setRunning(false)
+      switchTab('logs')
+    }
+  })
+
+  // Request styles on load and focus URL input for immediate paste
+  parent.postMessage({ pluginMessage: { type: 'get-styles' } }, '*')
+  document.getElementById('url-input').focus()
+
+}())
+</script>
+</body>
+</html>
