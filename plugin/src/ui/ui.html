@@ -30,12 +30,21 @@ input[type=text], input[type=number] {
 input[type=text]:focus, input[type=number]:focus {
   border-color: var(--figma-color-border-selected, #18a0fb);
 }
+.url-row { display: flex; gap: 6px; align-items: center; }
 #url-input {
-  width: 100%;
+  flex: 1;
   padding: 6px 8px;
   border-radius: 4px;
 }
 #url-input::placeholder { color: var(--figma-color-text-tertiary, #999); }
+#btn-compose-top {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  background: var(--figma-color-bg-brand, #18a0fb);
+  color: #fff; border: none; border-radius: 4px;
+  font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+#btn-compose-top:disabled { opacity: 0.5; cursor: default; }
 .tabs {
   display: flex;
   border-bottom: 1px solid var(--figma-color-border, #e5e5e5);
@@ -108,7 +117,10 @@ hr { border: none; border-top: 1px solid var(--figma-color-border, #e5e5e5); mar
 <body>
 
 <div class="section">
-  <input id="url-input" type="text" placeholder="Notion page URL (must be public)" />
+  <div class="url-row">
+    <input id="url-input" type="text" placeholder="Notion page URL (must be public)" />
+    <button id="btn-compose-top">Compose</button>
+  </div>
 </div>
 
 <div class="tabs">
@@ -149,7 +161,6 @@ hr { border: none; border-top: 1px solid var(--figma-color-border, #e5e5e5); mar
 </div>
 
 <div class="actions">
-  <button class="btn-primary" id="btn-compose">Compose</button>
   <button class="btn-secondary" id="btn-repaginate">Re-paginate</button>
 </div>
 
@@ -364,18 +375,24 @@ hr { border: none; border-top: 1px solid var(--figma-color-border, #e5e5e5); mar
 
   function setRunning(val) {
     running = val
-    document.getElementById('btn-compose').disabled = val
+    document.getElementById('btn-compose-top').disabled = val
     document.getElementById('btn-repaginate').disabled = val
-    document.getElementById('btn-compose').textContent = val ? 'Running…' : 'Compose'
+    document.getElementById('btn-compose-top').textContent = val ? 'Running…' : 'Compose'
   }
 
-  document.getElementById('btn-compose').addEventListener('click', function() {
+  function doCompose() {
     var s = buildSettings()
     if (!s.notionUrl) { addLog('error', 'Paste a Notion URL first'); switchTab('logs'); return }
     document.getElementById('logs-panel').innerHTML = ''
     setRunning(true)
     switchTab('logs')
     parent.postMessage({ pluginMessage: { type: 'compose', settings: s } }, '*')
+  }
+
+  document.getElementById('btn-compose-top').addEventListener('click', doCompose)
+
+  document.getElementById('url-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !running) doCompose()
   })
 
   document.getElementById('btn-repaginate').addEventListener('click', function() {
@@ -407,9 +424,9 @@ hr { border: none; border-top: 1px solid var(--figma-color-border, #e5e5e5); mar
     }
   })
 
-  // Request styles on load and focus URL input for immediate paste
+  // Request styles on load; re-focus URL input after DOM settles
   parent.postMessage({ pluginMessage: { type: 'get-styles' } }, '*')
-  document.getElementById('url-input').focus()
+  setTimeout(function() { document.getElementById('url-input').focus() }, 50)
 
 }())
 </script>
