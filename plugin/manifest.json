@@ -1,0 +1,11 @@
+{
+  "name": "Hemingway",
+  "id": "hemingway-plugin",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["https://hemingway-notion-proxy.workers.dev", "https://www.notion.so"]
+  }
+}
