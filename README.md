@@ -70,14 +70,16 @@ npm run build
 
 In Figma: **Plugins > Development > Import plugin from manifest** and select `plugin/manifest.json`.
 
-### Cloudflare Worker (optional — already deployed)
+### Cloudflare Worker
 
-The worker is live at `https://hemingway-notion-proxy.reflow-app.workers.dev`. To deploy your own:
+Each user needs to deploy their own worker instance:
 
 ```bash
 cd worker
 npx wrangler deploy
 ```
+
+Then update the proxy URL in the web client ([client/src/pipeline/fetchNotion.js](client/src/pipeline/fetchNotion.js)) and the Figma plugin UI to point to your deployed worker URL.
 
 ---
 
