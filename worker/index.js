@@ -89,8 +89,15 @@ const TYPE_MAP = {
   divider:         'divider',
 }
 
+function unwrap(entry) {
+  // Notion may nest the block data as { value: { value: {...}, role } } or { value: {...} }
+  const v = entry?.value
+  if (!v) return null
+  return v.value && v.role !== undefined ? v.value : v
+}
+
 function normalizeBlocks(allBlocks, pageId) {
-  const page = allBlocks[pageId]?.value
+  const page = unwrap(allBlocks[pageId])
   if (!page) throw new Error('Page block not found')
 
   const contentIds = page.content ?? []
@@ -99,9 +106,8 @@ function normalizeBlocks(allBlocks, pageId) {
   let prevType = null
 
   for (const id of contentIds) {
-    const entry = allBlocks[id]
-    if (!entry?.value) continue
-    const v = entry.value
+    const v = unwrap(allBlocks[id])
+    if (!v) continue
     const type = TYPE_MAP[v.type]
     if (!type) continue  // skip unsupported types (collection_view_page, page, etc.)
 

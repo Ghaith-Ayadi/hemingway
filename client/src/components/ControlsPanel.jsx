@@ -54,7 +54,10 @@ export default function ControlsPanel({
 
   return (
     <div className="column">
-      <div className="column-header">Controls</div>
+      <div className="column-header">
+        <img src="/hemingway.png" alt="Hemingway" style={{ width: 24, height: 24, borderRadius: 4, marginRight: 8 }} />
+        Hemingway
+      </div>
       <div className="column-body controls-body">
 
         {/* Source */}
@@ -67,6 +70,7 @@ export default function ControlsPanel({
               placeholder="Notion page URL (leave empty for testfile.md)"
               value={notionUrl}
               onChange={e => onNotionUrlChange(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !isRunning) onCompose() }}
             />
           </div>
         </div>
