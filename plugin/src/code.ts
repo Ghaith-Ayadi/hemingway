@@ -565,11 +565,15 @@ async function renderBlockNode(
     const len = run.text.length
     if (len === 0) continue
     const family = textStyle?.fontName.family ?? 'Inter'
-    if (run.bold || run.italic) {
+    // When a library text style is set, skip bold-only overrides: calling setRangeFontName
+    // would detach the node from the style. Italic is still applied since it's additional
+    // user-applied formatting that the base style doesn't cover.
+    const applyBold = run.bold && (!textStyle || run.italic)
+    if (applyBold || run.italic) {
       // Try the most specific variant first, fall back gracefully
-      const variants = run.bold && run.italic
+      const variants = applyBold && run.italic
         ? ['Bold Italic', 'Bold', 'Italic', 'Regular']
-        : run.bold
+        : applyBold
           ? ['Bold', 'Semibold', 'Medium', 'Regular']
           : ['Italic', 'Regular']
       let loaded: FontName | null = null

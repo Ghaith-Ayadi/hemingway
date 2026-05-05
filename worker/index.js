@@ -119,11 +119,14 @@ function normalizeBlocks(allBlocks, pageId) {
     }
     prevType = type
 
-    const block = {
-      id,
-      type,
-      content: parseRichText(v.properties?.title ?? []),
-    }
+    const rawContent = parseRichText(v.properties?.title ?? [])
+    // Notion's internal API annotates heading text with bold as a semantic property
+    // of the heading level (not user-applied formatting). Strip it so the Figma plugin
+    // can link the node to the library text style without setRangeFontName breaking the link.
+    const content = (type === 'heading_1' || type === 'heading_2' || type === 'heading_3')
+      ? rawContent.map(({ bold, ...rest }) => rest)
+      : rawContent
+    const block = { id, type, content }
 
     if (type === 'numbered_list_item') block.index = numberedIndex
     if (type === 'to_do') block.checked = v.properties?.checked?.[0]?.[0] === 'Yes'
